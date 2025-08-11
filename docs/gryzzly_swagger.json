@@ -1,0 +1,4149 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "# Using Gryzzly APIs\n\nThe Web API is a collection of HTTP RPC-style methods, all with URLs in the form `POST http://api.gryzzly.io/v1/RESSOURCE.ACTION`\n\nWhile it's not a REST API, those familiar with REST should be at home with its foundations in HTTP.\n\n## Building a request\n\nWhen sending a request to the API:\n\n* you must set the `Content-Type` header to `application/json`\n* you must have an `Authorization` header with your API key\n* you must set a payload even if empty \n* you may explicitly set the properties of an object to `null` to require its default value\n\nFor example, a request to `projects.create` might look like this:\n\n```http\nPOST /v1/projects.create\nContent-type: application/json\nAuthorization: Bearer xxxxxxxxxxxxxxxxx\n\n{\"name\":\"my project\"}\n```\n\nand `users.list` might look like this:\n\n```http\nPOST /v1/users.list\nContent-type: application/json\nAuthorization: Bearer xxxxxxxxxxxxxxxxx\n\n{}\n```\n\n## Evaluating responses\n\nA response from the API comes with a JSON object and an HTTP status code.\n\nSuccessful requests are answered with the status 200 and returned the ressource:\n\n```http\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{}\n```\n\nFailed requests are answered with a status 4xx or 5xx and returned an error:\n\n```http\nHTTP/1.1 401 OK\nContent-Type: application/json\n\n{\n    \"error_type\": \"unauthorized_access\",\n    \"error_description\": \"invalid api key\"\n}\n```\n\nThe error object is composed of:\n\n- an `error_type` containing a short machine-readable error code\n- an optional `error_description` containing additional information on the error\n\n## Authentication\n\nThe API only accepts requests made over HTTPS and requires an `Authorization` header set with an API key.\n\nYou can create and manage your API keys from [Gryzzly's Dashboard](https://app.gryzzly.io/administration/api-keys).\n\nThe syntax of the `Authorization` header follows the [RFC6750](https://datatracker.ietf.org/doc/html/rfc6750#section-2.1). It requires the `Bearer` authentification scheme followed by the API key:\n\n```\nAuthorization: Bearer xxxxxxxxxxxxxxxxx\n```\n\n## Rate limits\n\nGryzzly APIs rely on rate limits to help provide a pleasant experience. We limit our teams to 50 requests per 10 seconds, allowing short burst as well as regular stream.\n\nIf you exceed the rate limit, the response will look like this:\n\n```http\nHTTP/1.1 429 Too Many Requests\nContent-Type: application/json\n\n{\n    \"error_type\": \"rate_limits\",\n    \"error_description\": \"allowed 50 requests per 10 seconds\"\n}\n```\n",
+        "title": "Swagger Gryzzly API",
+        "contact": {
+            "name": "Gryzzly API",
+            "url": "http://www.swagger.io/support",
+            "email": "contact@gryzzly.io"
+        },
+        "version": "1.0"
+    },
+    "basePath": "/v1",
+    "paths": {
+        "/customers.create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Create a customer",
+                "operationId": "CreateCustomer",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateCustomerParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Customer"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers.delete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Delete a customer",
+                "operationId": "DeleteCustomer",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteCustomerParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.OkResponse"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Get a customer",
+                "operationId": "GetCustomer",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetCustomerParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Customer"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "List customers",
+                "operationId": "ListCustomers",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListCustomersParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Customers"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers.update": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Customers"
+                ],
+                "summary": "Update a customer",
+                "operationId": "UpdateCustomer",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateCustomerParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Customer"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/declarations.create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Declarations"
+                ],
+                "summary": "Create a declaration",
+                "operationId": "CreateDeclaration",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateDeclarationParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Declaration"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/declarations.delete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Declarations"
+                ],
+                "summary": "Delete a declaration",
+                "operationId": "DeleteDeclaration",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteDeclarationParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Declaration"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/declarations.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Declarations"
+                ],
+                "summary": "List declarations",
+                "operationId": "ListDeclarations",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListDeclarationsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Declaration"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/declarations.update": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Declarations"
+                ],
+                "summary": "Update a declaration",
+                "operationId": "UpdateDeclaration",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateDeclarationParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Declaration"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/discounts.create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Create a discount",
+                "operationId": "CreateDiscount",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateDiscountParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Discount"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/discounts.delete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Delete a discount",
+                "operationId": "DeleteDiscount",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteDiscountParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.OkResponse"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/discounts.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Get a discount",
+                "operationId": "GetDiscount",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetDiscountParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Discount"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/discounts.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "List discounts",
+                "operationId": "ListDiscounts",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListDiscountsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Discounts"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/discounts.update": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discounts"
+                ],
+                "summary": "Update a discount",
+                "operationId": "UpdateDiscount",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateDiscountParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Discount"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/groups.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Groups"
+                ],
+                "summary": "Get a group",
+                "operationId": "GetGroup",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetGroupParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Group"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/groups.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Groups"
+                ],
+                "summary": "List groups",
+                "operationId": "ListGroups",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListGroupsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Groups"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/groupsets.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Groupsets"
+                ],
+                "summary": "Get a groupset",
+                "operationId": "GetGroupset",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetGroupsetParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Groupset"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/groupsets.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Groupsets"
+                ],
+                "summary": "List groupsets",
+                "operationId": "ListGroupsets",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListGroupsetsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Groupsets"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leavesPeriods.create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LeavePeriods"
+                ],
+                "summary": "Create a leave period",
+                "operationId": "CreateLeavePeriod",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateLeavePeriodParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LeavePeriod"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leavesPeriods.delete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LeavePeriods"
+                ],
+                "summary": "Delete a leave period",
+                "operationId": "DeleteLeavePeriod",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteLeavePeriodParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.OkResponse"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leavesPeriods.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LeavePeriods"
+                ],
+                "summary": "Get a leave period",
+                "operationId": "GetLeavePeriod",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetLeavePeriodParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LeavePeriod"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leavesPeriods.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LeavePeriods"
+                ],
+                "summary": "List leaves periods",
+                "operationId": "ListLeavePeriods",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListLeavePeriodsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LeavePeriods"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leavesPeriods.update": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LeavePeriods"
+                ],
+                "summary": "Update a leave period",
+                "operationId": "UpdateLeavePeriod",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateLeavePeriodParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LeavePeriod"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Create a project",
+                "operationId": "CreateProject",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateProjectParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Project"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.delete": {
+            "post": {
+                "description": "This method will fail if their are declarations associated with the project.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Delete a project",
+                "operationId": "DeleteProject",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteProjectParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.OkResponse"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get a project",
+                "operationId": "GetProject",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetProjectParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Project"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.getMetrics": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get project's metrics",
+                "operationId": "GetProjectMetrics",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetProjectMetricsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ProjectMetrics"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "List projects",
+                "operationId": "ListProjects",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListProjectsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Projects"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.listMetrics": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "List projects metrics",
+                "operationId": "ListProjectsMetrics",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListProjectsMetricsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ProjectMetrics"
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects.update": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Update a project",
+                "operationId": "UpdateProject",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateProjectParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Project"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases.create": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Create a purchase",
+                "operationId": "CreatePurchase",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePurchaseParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Purchase"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases.delete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Delete a purchase",
+                "operationId": "DeletePurchase",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeletePurchaseParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Purchase"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Get a purchase",
+                "operationId": "GetPurchase",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetPurchaseParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Purchase"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "List purchases",
+                "operationId": "ListPurchases",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListPurchasesParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Purchases"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases.update": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Update a purchase",
+                "operationId": "UpdatePurchase",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdatePurchaseParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Purchase"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Get a tag",
+                "operationId": "GetTag",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetTagParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Tag"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tags.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "List tags",
+                "operationId": "ListTags",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListTagsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Tags"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tagsets.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tagsets"
+                ],
+                "summary": "Get a tagset",
+                "operationId": "GetTagset",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetTagsetParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Tagset"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tagsets.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tagsets"
+                ],
+                "summary": "List tagsets",
+                "operationId": "ListTagsets",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListTagsetsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Tagsets"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks.create": {
+            "post": {
+                "description": "The creation of a task is conditioned by the type of budget you want to use\nand its position in the project's hierarchy.\n\n### Project hierarchy\n\nA task can be:\n\n- a root task, if is has no parent and is not a group\n- a group task, if `is_group` is true\n- a subtask, if `parent_id` is set\n\nFor exemple, a project might look like this:\n\n```\nMy project\n|\n+--A root task\n|\n+--A group task\n   |\n   +---A subtask\n```\n\n### Budget type\n\nThere are 4 types of budget, each with different requirements.\n\n#### None\n\nIf you don't need to follow your budget, this is the way to go. Your task only requires a name, the ID of the project and a start date.\n\nYou can add the `planned_duration` property if you want additional information and graphics in the dashboard.\n\n#### Detailed\n\n*Only available with the budget offer.*\n\nThe detailed budget allows you to track profits for tasks sold with a fixed budget and a fixed amount of time.\n\nFor root task and subtask, it requires 2 of the following properties:\n- `planned_duration`, the duration planned\n- `budget_amount`, the estimated budget\n- `hourly_rate`, the rate at which 1 hour is budgeted\n\n#### Global\n\n*Only available with the budget offer.*\n\nThe global budget allows you to track profits for tasks sold with a fixed budget and a dynamic amount of time or a dynamic rate.\n\nThe following fields are required when creating a root task:\n\n- `budget_amount`\n- `hourly_rate_mode: task | contributor`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nThe following fields are required when creating a group task:\n\n- `budget_amount`\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == group`\n\nThe following fields are required when creating a subtask:\n\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nAdditional rules apply to the `hourly_rate_mode` in a subtask:\n\n- if the parent's `hourly_rate_mode` is equal to `contributor`, it must be set to `contributor`\n- if the parent's `hourly_rate_mode` is equal to `group`, it must be set to `group`\n- if the parent's `hourly_rate_mode` is equal to `task`, it can either be `task` or `contributor`\n\n#### Time\n\n*Only available with the budget offer.*\n\nThe time budget allows you to track profits for tasks sold with a dynamic budget.\n\nThe following fields are required when creating a root task:\n\n- `hourly_rate_mode: task | contributor`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nThe following fields are required when creating a group task:\n\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == group`\n\nThe following fields are required when creating a subtask:\n\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nAdditional rules apply to the `hourly_rate_mode` in a subtask:\n\n- if the parent's `hourly_rate_mode` is equal to `contributor`, it must be set to `contributor`\n- if the parent's `hourly_rate_mode` is equal to `group`, it must be set to `group`\n- if the parent's `hourly_rate_mode` is equal to `task`, it can either be `task` or `contributor`\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Create a task",
+                "operationId": "CreateTask",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateTaskParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Task"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks.delete": {
+            "post": {
+                "description": "This method will fail if their are declarations associated with the task.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Delete a task",
+                "operationId": "DeleteTask",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.DeleteTaskParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.OkResponse"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get a task",
+                "operationId": "GetTask",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetTaskParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Task"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "List tasks",
+                "operationId": "ListTasks",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListTasksParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Tasks"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks.update": {
+            "post": {
+                "description": "The update of a task is conditioned by the type of budget you want to use and its position in the project's hierarchy. You can consult the documentation on how to create a task for detailed information.\n\n### Budget type\n\nThere are 4 types of budget, each with different requirements.\n\n#### None\n\nNo additional field is required. But you can add the `planned_duration` property if you want additional information and graphics in the dashboard.\n\n### Detailed\n\nFor root task and subtask, it requires 2 of the following properties:\n- `planned_duration`, the duration planned\n- `budget_amount`, the estimated budget\n- `hourly_rate`, the rate at which 1 hour is budgeted\n\n#### Global\n\n*Only available with the budget offer.*\n\nThe following fields are required when creating a root task:\n\n- `budget_amount`\n- `hourly_rate_mode: task | contributor`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nThe following fields are required when creating a group task:\n\n- `budget_amount`\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == group`\n\nThe following fields are required when creating a subtask:\n\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nAdditional rules apply to the `hourly_rate_mode` in a subtask:\n\n- if the parent's `hourly_rate_mode` is equal to `contributor`, it must be set to `contributor`\n- if the parent's `hourly_rate_mode` is equal to `group`, it must be set to `group`\n- if the parent's `hourly_rate_mode` is equal to `task`, it can either be `task` or `contributor`\n\n### Time\n\n*Only available with the budget offer.*\n\nThe following fields are required when creating a root task:\n\n- `budget_amount`\n- `hourly_rate_mode: task | contributor`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nThe following fields are required when creating a group task:\n\n- `budget_amount`\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == group`\n\nThe following fields are required when creating a subtask:\n\n- `hourly_rate_mode: task | contributor | group`\n- `hourly_rate` if `hourly_rate_mode == task`\n\nAdditional rules apply to the `hourly_rate_mode` in a subtask:\n\n- if the parent's `hourly_rate_mode` is equal to `contributor`, it must be set to `contributor`\n- if the parent's `hourly_rate_mode` is equal to `group`, it must be set to `group`\n- if the parent's `hourly_rate_mode` is equal to `task`, it can either be `task` or `contributor`\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Update a task",
+                "operationId": "UpdateTask",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateTaskParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Task"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/users.get": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get a user",
+                "operationId": "GetUser",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.GetUserParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/users.invite": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Invite a user",
+                "operationId": "InviteUser",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.InviteUserParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/users.list": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "List users",
+                "operationId": "ListUsers",
+                "parameters": [
+                    {
+                        "description": "payload",
+                        "name": "params",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.ListUsersParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Users"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/model.Error"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "gapi.Duration": {
+            "type": "integer",
+            "enum": [
+                60,
+                3600
+            ],
+            "x-enum-varnames": [
+                "Minute",
+                "Hour"
+            ]
+        },
+        "model.CreateCustomerParams": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "managers": {
+                    "description": "The list of managers associated to the customer",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "name": {
+                    "description": "The customer's name",
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreateDeclarationParams": {
+            "type": "object",
+            "required": [
+                "date",
+                "task_id",
+                "user_id"
+            ],
+            "properties": {
+                "date": {
+                    "description": "The declaration date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "description": {
+                    "description": "The description of the declaration",
+                    "type": "string",
+                    "maxLength": 256,
+                    "x-nullable": true
+                },
+                "duration": {
+                    "description": "The duration of the declaration in seconds",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/gapi.Duration"
+                        }
+                    ]
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the declaration",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "user_id": {
+                    "description": "The user's identifier associated to the declaration",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.CreateDiscountParams": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "amount": {
+                    "description": "The discount's amount",
+                    "type": "number"
+                },
+                "name": {
+                    "description": "The discount's name",
+                    "type": "string"
+                },
+                "project_id": {
+                    "description": "The project's identifier associated to the discount (required if task_id is empty)",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the discount (required if project_id is empty)",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                }
+            }
+        },
+        "model.CreateLeavePeriodParams": {
+            "type": "object",
+            "properties": {
+                "delete_declaration": {
+                    "description": "A param to delete declarations if they exist",
+                    "type": "boolean",
+                    "x-nullable": true
+                },
+                "description": {
+                    "description": "The description of the leave period",
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "end_at": {
+                    "description": "The end at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_type": {
+                    "description": "The end type",
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "am",
+                        "pm"
+                    ]
+                },
+                "start_at": {
+                    "description": "The start at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "start_type": {
+                    "description": "The start type",
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "am",
+                        "pm"
+                    ]
+                },
+                "user_id": {
+                    "description": "The user's identifier associated to the leave period",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.CreateProjectParams": {
+            "type": "object",
+            "required": [
+                "start_at"
+            ],
+            "properties": {
+                "code": {
+                    "description": "The project's code",
+                    "type": "string",
+                    "maxLength": 36,
+                    "x-nullable": true
+                },
+                "contributors": {
+                    "description": "The list of contributors (must be empty when visibility=\"public\")",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "customer_id": {
+                    "description": "The customer's identifier associated to the project",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "end_at": {
+                    "description": "An UTC time indicating when the project is supposed to end",
+                    "type": "string",
+                    "format": "date"
+                },
+                "groups": {
+                    "description": "User group assignments",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "is_billable": {
+                    "description": "The project's billable status",
+                    "type": "boolean"
+                },
+                "managers": {
+                    "description": "The list of managers",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "name": {
+                    "description": "The project's name",
+                    "type": "string"
+                },
+                "start_at": {
+                    "description": "An UTC time indicating when the project starts",
+                    "type": "string",
+                    "format": "date"
+                },
+                "tags": {
+                    "description": "The list of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "visibility": {
+                    "description": "The project visibility for users",
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ]
+                }
+            }
+        },
+        "model.CreatePurchaseParams": {
+            "type": "object",
+            "properties": {
+                "billed_at": {
+                    "description": "The purchase billed at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "billed_price": {
+                    "description": "The purchase billed price",
+                    "type": "number"
+                },
+                "billing_policy": {
+                    "description": "The purchase budget billing policy",
+                    "type": "string",
+                    "enum": [
+                        "add",
+                        "ignore"
+                    ],
+                    "example": "add"
+                },
+                "name": {
+                    "description": "The purchase name",
+                    "type": "string"
+                },
+                "paid_at": {
+                    "description": "The purchase paid at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "paid_price": {
+                    "description": "The purchase paid price",
+                    "type": "number"
+                },
+                "project_id": {
+                    "description": "The project's identifier associated to the purchase (required if task_id is empty)",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the purchase (required if project_id is empty)",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                }
+            }
+        },
+        "model.CreateTaskParams": {
+            "type": "object",
+            "required": [
+                "name",
+                "project_id",
+                "start_at"
+            ],
+            "properties": {
+                "budget_amount": {
+                    "description": "The task's budget amount",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "budget_type": {
+                    "description": "The task's budget type",
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "detailed",
+                        "global",
+                        "time"
+                    ]
+                },
+                "end_at": {
+                    "description": "A date indicating when the task is supposed to end",
+                    "type": "string",
+                    "format": "date",
+                    "x-nullable": true
+                },
+                "estimated_duration": {
+                    "description": "The task's estimated duration",
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "groups": {
+                    "description": "User group assignments",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "hourly_rate": {
+                    "description": "The task's hourly rate",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "hourly_rate_mode": {
+                    "description": "The task's hourly rate mode",
+                    "type": "string",
+                    "enum": [
+                        "task",
+                        "group",
+                        "contributor"
+                    ],
+                    "x-nullable": true
+                },
+                "is_container": {
+                    "description": "Indicate if the task is a container",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "The task's name",
+                    "type": "string"
+                },
+                "parent_id": {
+                    "description": "The parent task's identifier if this task is a subtask",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "planned_duration": {
+                    "description": "The task's planned duration",
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "project_id": {
+                    "description": "The project's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "start_at": {
+                    "description": "A date indicating when the task starts",
+                    "type": "string",
+                    "format": "date"
+                },
+                "tags": {
+                    "description": "The list of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.Customer": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "An UTC time indicating when the customer was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "description": "The customer's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_active": {
+                    "description": "Indicates if the customer is active",
+                    "type": "boolean"
+                },
+                "managers": {
+                    "description": "The list of managers associated to the customer",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "name": {
+                    "description": "The customer's name",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the customer was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Customers": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Customer"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Declaration": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "An UTC time indicating when the declaration object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "date": {
+                    "description": "The declaration date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "description": {
+                    "description": "The description of the declaration",
+                    "type": "string",
+                    "maxLength": 256,
+                    "x-nullable": true
+                },
+                "duration": {
+                    "description": "The duration of the declaration in seconds",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/gapi.Duration"
+                        }
+                    ]
+                },
+                "edited_by": {
+                    "description": "The identifier of the last user editing the duration",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "hourly_cost": {
+                    "description": "The hourly cost of the user when the declaration was created",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "id": {
+                    "description": "The declaration's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the declaration",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the declaration object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "user_id": {
+                    "description": "The user's identifier associated to the declaration",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeleteCustomerParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The customer's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeleteDeclarationParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The declaration's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeleteDiscountParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The discount's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeleteLeavePeriodParams": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "The leave period's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeleteProjectParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeletePurchaseParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The purchase's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.DeleteTaskParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The task's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.Discount": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "The discount's amount",
+                    "type": "number"
+                },
+                "created_at": {
+                    "description": "An UTC time indicating when the discount object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "description": "The discount's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "description": "The discount's name",
+                    "type": "string"
+                },
+                "project_id": {
+                    "description": "The project's identifier associated to the discount (required if task_id is empty)",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the discount (required if project_id is empty)",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the discount object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Discounts": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Discount"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Error": {
+            "type": "object",
+            "properties": {
+                "error_description": {
+                    "type": "string"
+                },
+                "error_type": {
+                    "type": "string",
+                    "enum": [
+                        "business_error",
+                        "internal_error",
+                        "invalid_argument",
+                        "no_permission",
+                        "not_found",
+                        "rate_limits",
+                        "unauthorized_access"
+                    ]
+                }
+            }
+        },
+        "model.GetCustomerParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The customer's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetDiscountParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The discount's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetGroupParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetGroupsetParams": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "The groupset's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetLeavePeriodParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The leave period's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetProjectMetricsParams": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetProjectParams": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetPurchaseParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The purchase's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetTagParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetTagsetParams": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "The tagset's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetTaskParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The task's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.GetUserParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.Group": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "An UTC time indicating when the groupset object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "groupset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "id": {
+                    "description": "The groupset's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "manager_id": {
+                    "description": "The groupset's manager",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "The groupset's name",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the groupset object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Groups": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Group"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Groupset": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "The groupset's color",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "An UTC time indicating when the groupset object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "description": "The groupset's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_group_unique": {
+                    "description": "Indicate if group must be unique when attributed to user",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "The groupset's name",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the groupset object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Groupsets": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Groupset"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.InviteUserParams": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "description": "The user’s email address",
+                    "type": "string",
+                    "format": "email"
+                },
+                "group_ids": {
+                    "description": "The user's groups",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "role": {
+                    "description": "The user's role",
+                    "type": "string",
+                    "enum": [
+                        "contributor",
+                        "collaborator",
+                        "manager",
+                        "director",
+                        "admin"
+                    ],
+                    "example": "contributor"
+                }
+            }
+        },
+        "model.LeavePeriod": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "An UTC time indicating when the leave period object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "description": {
+                    "description": "The description of the leave period",
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "edited_by": {
+                    "description": "The user's identifier who edited the leave period",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "end_at": {
+                    "description": "The end at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_type": {
+                    "description": "The end type",
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "am",
+                        "pm"
+                    ]
+                },
+                "id": {
+                    "description": "The leave period's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "start_at": {
+                    "description": "The start at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "start_type": {
+                    "description": "The start type",
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "am",
+                        "pm"
+                    ]
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the leave period object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "user_id": {
+                    "description": "The user's identifier associated to the leave period",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.LeavePeriods": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.LeavePeriod"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ListCustomersParams": {
+            "type": "object",
+            "properties": {
+                "customer_ids": {
+                    "description": "The customers' identifiers",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_active": {
+                    "description": "The customers' status",
+                    "type": "boolean",
+                    "x-nullable": true
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "manager_ids": {
+                    "description": "The list of managers associated to the customers",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ListDeclarationsParams": {
+            "type": "object",
+            "required": [
+                "task_ids",
+                "user_ids"
+            ],
+            "properties": {
+                "from": {
+                    "description": "Limit results after or equal specified date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "task_ids": {
+                    "description": "Task's identifier",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "to": {
+                    "description": "Limit results before or equal specified date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "user_ids": {
+                    "description": "Users's identifier",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListDiscountsParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "project_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "task_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.ListGroupsParams": {
+            "type": "object",
+            "properties": {
+                "group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "groupset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ListGroupsetsParams": {
+            "type": "object",
+            "properties": {
+                "groupset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ListLeavePeriodsParams": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "description": "Limit results after or equal specified date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "to": {
+                    "description": "Limit results before or equal specified date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "user_ids": {
+                    "description": "Users's identifier",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListProjectsMetricsParams": {
+            "type": "object",
+            "required": [
+                "project_ids"
+            ],
+            "properties": {
+                "project_ids": {
+                    "description": "List of project IDs",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListProjectsParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "The project's status",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "done",
+                            "archived"
+                        ]
+                    }
+                }
+            }
+        },
+        "model.ListPurchasesParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "project_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "task_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListTagsParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "tag_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "tagset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListTagsetsParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "tagset_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListTasksParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                },
+                "project_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "task_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                }
+            }
+        },
+        "model.ListUsersParams": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.OkResponse": {
+            "type": "object",
+            "properties": {
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "model.Project": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "The project's code",
+                    "type": "string",
+                    "maxLength": 36,
+                    "x-nullable": true
+                },
+                "contributors": {
+                    "description": "The list of contributors (must be empty when visibility=\"public\")",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "created_at": {
+                    "description": "An UTC time indicating when the project was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "customer_id": {
+                    "description": "The customer's identifier associated to the project",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "end_at": {
+                    "description": "A date indicating when the project is supposed to end",
+                    "type": "string",
+                    "format": "date",
+                    "x-nullable": true
+                },
+                "groups": {
+                    "description": "User group assignments",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "id": {
+                    "description": "The project's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_billable": {
+                    "description": "The project's billable status",
+                    "type": "boolean"
+                },
+                "managers": {
+                    "description": "The list of managers",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "name": {
+                    "description": "The project's name",
+                    "type": "string"
+                },
+                "note": {
+                    "description": "The project note",
+                    "type": "string"
+                },
+                "start_at": {
+                    "description": "A date indicating when the project starts",
+                    "type": "string",
+                    "format": "date"
+                },
+                "status": {
+                    "description": "The project's status",
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "done",
+                        "archived"
+                    ]
+                },
+                "tags": {
+                    "description": "The list of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the project was updated",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "visibility": {
+                    "description": "The project visibility for users",
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ]
+                }
+            }
+        },
+        "model.ProjectMetrics": {
+            "type": "object",
+            "properties": {
+                "budget_amount": {
+                    "type": "number"
+                },
+                "budget_spent": {
+                    "type": "number"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "time_elapsed": {
+                    "$ref": "#/definitions/gapi.Duration"
+                },
+                "time_planned": {
+                    "$ref": "#/definitions/gapi.Duration"
+                }
+            }
+        },
+        "model.Projects": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Project"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Purchase": {
+            "type": "object",
+            "properties": {
+                "billed_at": {
+                    "description": "The purchase billed at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "billed_price": {
+                    "description": "The purchase billed price",
+                    "type": "number"
+                },
+                "billing_policy": {
+                    "description": "The purchase budget billing policy",
+                    "type": "string",
+                    "enum": [
+                        "add",
+                        "ignore"
+                    ],
+                    "example": "add"
+                },
+                "created_at": {
+                    "description": "An UTC time indicating when the purchase object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "description": "The purchase's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "description": "The purchase name",
+                    "type": "string"
+                },
+                "paid_at": {
+                    "description": "The purchase paid at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "paid_price": {
+                    "description": "The purchase paid price",
+                    "type": "number"
+                },
+                "project_id": {
+                    "description": "The project's identifier associated to the purchase",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the purchase",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the purchase object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Purchases": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Purchase"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Tag": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "An UTC time indicating when the tagset object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "description": "The tagset's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "description": "The tagset's name",
+                    "type": "string"
+                },
+                "tagset_id": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the tagset object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Tags": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Tag"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Tagset": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "description": "The tagset's color",
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "An UTC time indicating when the tagset object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "id": {
+                    "description": "The tagset's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_tag_unique": {
+                    "description": "Indicate if tag must be unique when attributed to user",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "The tagset's name",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the tagset object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Tagsets": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Tagset"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Task": {
+            "type": "object",
+            "properties": {
+                "budget_amount": {
+                    "description": "The task's budget amount",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "budget_type": {
+                    "description": "The task's budget type",
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "detailed",
+                        "global",
+                        "time"
+                    ]
+                },
+                "completed_at": {
+                    "description": "An UTC time indicating when the task has been completed",
+                    "type": "string",
+                    "format": "date-time",
+                    "x-nullable": true
+                },
+                "created_at": {
+                    "description": "An UTC time indicating when the task was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "end_at": {
+                    "description": "A date indicating when the task is supposed to end",
+                    "type": "string",
+                    "format": "date",
+                    "x-nullable": true
+                },
+                "groups": {
+                    "description": "User group assignments",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "hourly_rate": {
+                    "description": "The task's hourly rate",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "hourly_rate_mode": {
+                    "description": "The task's hourly rate mode (used with budget_type=time|detailed)",
+                    "type": "string",
+                    "enum": [
+                        "task",
+                        "group",
+                        "contributor"
+                    ],
+                    "x-nullable": true
+                },
+                "id": {
+                    "description": "The task's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_container": {
+                    "description": "Indicate if the task is a container",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "The task's name",
+                    "type": "string"
+                },
+                "parent_id": {
+                    "description": "The parent task's identifier if this task is a subtask",
+                    "type": "string",
+                    "x-nullable": true
+                },
+                "planned_duration": {
+                    "description": "The task's planned duration",
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "project_id": {
+                    "description": "The project's identifier",
+                    "type": "string"
+                },
+                "start_at": {
+                    "description": "A date indicating when the task starts",
+                    "type": "string",
+                    "format": "date"
+                },
+                "tags": {
+                    "description": "The list of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the task was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Tasks": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Task"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.UpdateCustomerParams": {
+            "type": "object",
+            "required": [
+                "id",
+                "name"
+            ],
+            "properties": {
+                "id": {
+                    "description": "The customer's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_active": {
+                    "description": "Indicates if the customer is active",
+                    "type": "boolean"
+                },
+                "managers": {
+                    "description": "The list of managers associated to the customer",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "name": {
+                    "description": "The customer's name",
+                    "type": "string"
+                }
+            }
+        },
+        "model.UpdateDeclarationParams": {
+            "type": "object",
+            "required": [
+                "date",
+                "duration",
+                "id",
+                "task_id"
+            ],
+            "properties": {
+                "date": {
+                    "description": "The declaration date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "description": {
+                    "description": "The description of the declaration",
+                    "type": "string",
+                    "maxLength": 256,
+                    "x-nullable": true
+                },
+                "duration": {
+                    "description": "The duration of the declaration in seconds",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/gapi.Duration"
+                        }
+                    ]
+                },
+                "id": {
+                    "description": "The declaration's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "task_id": {
+                    "description": "The task's identifier associated to the declaration",
+                    "type": "string",
+                    "format": "uuid"
+                }
+            }
+        },
+        "model.UpdateDiscountParams": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "The discount's amount",
+                    "type": "number"
+                },
+                "id": {
+                    "description": "The discount's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "description": "The discount's name",
+                    "type": "string"
+                }
+            }
+        },
+        "model.UpdateLeavePeriodParams": {
+            "type": "object",
+            "properties": {
+                "delete_declaration": {
+                    "description": "A param to delete declarations if they exist",
+                    "type": "boolean",
+                    "x-nullable": true
+                },
+                "description": {
+                    "description": "The description of the leave period",
+                    "type": "string",
+                    "maxLength": 128
+                },
+                "end_at": {
+                    "description": "The end at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "end_type": {
+                    "description": "The end type",
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "am",
+                        "pm"
+                    ]
+                },
+                "id": {
+                    "description": "The leave period's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "start_at": {
+                    "description": "The start at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "start_type": {
+                    "description": "The start type",
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "am",
+                        "pm"
+                    ]
+                }
+            }
+        },
+        "model.UpdateProjectParams": {
+            "type": "object",
+            "required": [
+                "start_at"
+            ],
+            "properties": {
+                "code": {
+                    "description": "The project's code",
+                    "type": "string",
+                    "maxLength": 36,
+                    "x-nullable": true
+                },
+                "contributors": {
+                    "description": "The list of contributors (must be empty when visibility=\"public\")",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "customer_id": {
+                    "description": "The customer's identifier associated to the project",
+                    "type": "string",
+                    "format": "uuid",
+                    "x-nullable": true
+                },
+                "end_at": {
+                    "description": "An UTC time indicating when the project is supposed to end",
+                    "type": "string",
+                    "format": "date"
+                },
+                "groups": {
+                    "description": "User group assignments",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "id": {
+                    "description": "The project's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_billable": {
+                    "description": "The project's billable status",
+                    "type": "boolean"
+                },
+                "managers": {
+                    "description": "The list of managers",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "name": {
+                    "description": "The project's name",
+                    "type": "string"
+                },
+                "start_at": {
+                    "description": "An UTC time indicating when the project starts",
+                    "type": "string",
+                    "format": "date"
+                },
+                "status": {
+                    "description": "The project's status",
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "done",
+                        "archived"
+                    ]
+                },
+                "tags": {
+                    "description": "The list of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "visibility": {
+                    "description": "The project visibility for users",
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ]
+                }
+            }
+        },
+        "model.UpdatePurchaseParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "billed_at": {
+                    "description": "The purchase billed at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "billed_price": {
+                    "description": "The purchase billed price",
+                    "type": "number"
+                },
+                "billing_policy": {
+                    "description": "The purchase budget billing policy",
+                    "type": "string",
+                    "enum": [
+                        "add",
+                        "ignore"
+                    ],
+                    "example": "add"
+                },
+                "id": {
+                    "description": "The purchase's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "description": "The purchase name",
+                    "type": "string"
+                },
+                "paid_at": {
+                    "description": "The purchase paid at date",
+                    "type": "string",
+                    "format": "date"
+                },
+                "paid_price": {
+                    "description": "The purchase paid price",
+                    "type": "number"
+                }
+            }
+        },
+        "model.UpdateTaskParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "budget_amount": {
+                    "description": "The task's budget amount",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "completed_at": {
+                    "description": "An UTC time indicating when the task has been completed",
+                    "type": "string",
+                    "format": "date-time",
+                    "x-nullable": true
+                },
+                "end_at": {
+                    "description": "A date indicating when the task is supposed to end",
+                    "type": "string",
+                    "format": "date",
+                    "x-nullable": true
+                },
+                "groups": {
+                    "description": "User group assignments",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "hourly_rate": {
+                    "description": "The task's hourly rate",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "hourly_rate_mode": {
+                    "description": "The task's hourly rate mode",
+                    "type": "string",
+                    "enum": [
+                        "task",
+                        "group",
+                        "contributor"
+                    ],
+                    "x-nullable": true
+                },
+                "id": {
+                    "description": "The task's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "description": "The task's name",
+                    "type": "string"
+                },
+                "planned_duration": {
+                    "description": "The task's planned duration",
+                    "type": "integer",
+                    "x-nullable": true
+                },
+                "start_at": {
+                    "description": "A date indicating when the task starts",
+                    "type": "string",
+                    "format": "date"
+                },
+                "tags": {
+                    "description": "The list of tags",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.User": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "An UTC time indicating when the user object was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "disabled_at": {
+                    "description": "Indicate when the user has been disabled",
+                    "type": "string"
+                },
+                "email": {
+                    "description": "The user’s email address",
+                    "type": "string",
+                    "format": "email"
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "hourly_cost": {
+                    "description": "The user's hourly cost (available only for budget offer)",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "hourly_rate": {
+                    "description": "The user's hourly rate (available only for budget offer)",
+                    "type": "number",
+                    "x-nullable": true
+                },
+                "id": {
+                    "description": "The user's identifier",
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "is_disabled": {
+                    "description": "DEPRECATED: Indicate if the user is disabled",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "The user’s displayed name",
+                    "type": "string",
+                    "example": "Jean-Didier"
+                },
+                "role": {
+                    "description": "The user's role",
+                    "type": "string",
+                    "enum": [
+                        "contributor",
+                        "collaborator",
+                        "manager",
+                        "director",
+                        "admin"
+                    ],
+                    "example": "contributor"
+                },
+                "timesheet_approved_until": {
+                    "description": "The date until which times are validated",
+                    "type": "string",
+                    "format": "date"
+                },
+                "updated_at": {
+                    "description": "An UTC time indicating when the user object was updated",
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "model.Users": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "The number of entries according to the filters",
+                    "type": "integer"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.User"
+                    }
+                },
+                "limit": {
+                    "description": "The maximum number of entries to return (max: 1000)",
+                    "type": "integer",
+                    "maximum": 1000
+                },
+                "offset": {
+                    "description": "The (zero-based) offset of the first item in the collection to return",
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

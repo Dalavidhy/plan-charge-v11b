@@ -1,0 +1,1273 @@
+openapi: 3.0.3
+info:
+  title: Plan Charge v9 API
+  version: 1.0.0
+  description: |
+    OpenAPI spec for Plan Charge v9 backend (FastAPI) covering identity, planning, integrations, and reporting.
+servers:
+  - url: /api/v1
+tags:
+  - name: Auth
+  - name: Orgs
+  - name: People
+  - name: Teams
+  - name: Calendars
+  - name: Projects
+  - name: Tasks
+  - name: Allocations
+  - name: Reports
+  - name: Integrations
+  - name: Identity
+  - name: Benefits
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    FromDate:
+      name: from
+      in: query
+      schema: { type: string, format: date }
+    ToDate:
+      name: to
+      in: query
+      schema: { type: string, format: date }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: { type: object, additionalProperties: true }
+    IdResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+    Organization:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        timezone: { type: string, default: Europe/Paris }
+        default_workweek:
+          type: object
+          additionalProperties: true
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Person:
+      type: object
+      required: [full_name]
+      properties:
+        id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        full_name: { type: string }
+        active: { type: boolean, default: true }
+        manager_id: { type: string, format: uuid, nullable: true }
+        cost_center: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        weekly_hours_default: { type: number, nullable: true }
+        source: { type: string, enum: [manual, payfit, gryzzly, import] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PersonEmail:
+      type: object
+      required: [person_id, email, kind]
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        kind: { type: string, enum: [corporate, personal, integration] }
+        is_primary: { type: boolean }
+        verified: { type: boolean }
+        source: { type: string, nullable: true }
+    PersonIdentifier:
+      type: object
+      required: [person_id, id_type, id_value]
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        id_type: { type: string }
+        id_value: { type: string }
+        source: { type: string, nullable: true }
+    Engagement:
+      type: object
+      required: [person_id, type, start_date]
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        type: { type: string, enum: [employee, contractor, mandataire, freelance] }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date, nullable: true }
+        weekly_hours_default: { type: number, nullable: true }
+        payroll_eligible: { type: boolean }
+        notes: { type: string, nullable: true }
+    Team:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        name: { type: string }
+        lead_id: { type: string, format: uuid, nullable: true }
+        color: { type: string, nullable: true }
+    TeamMember:
+      type: object
+      required: [team_id, person_id, active_from]
+      properties:
+        id: { type: string, format: uuid }
+        team_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        active_from: { type: string, format: date }
+        active_to: { type: string, format: date, nullable: true }
+        role_in_team: { type: string, nullable: true }
+    Calendar:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        name: { type: string }
+        workweek:
+          type: object
+          additionalProperties: true
+    Holiday:
+      type: object
+      required: [calendar_id, date, label]
+      properties:
+        id: { type: string, format: uuid }
+        calendar_id: { type: string, format: uuid }
+        date: { type: string, format: date }
+        label: { type: string }
+        is_full_day: { type: boolean }
+        hours: { type: number, nullable: true }
+    Capacity:
+      type: object
+      required: [person_id, period_start, hours_per_week]
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        calendar_id: { type: string, format: uuid, nullable: true }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        hours_per_week: { type: number }
+        notes: { type: string, nullable: true }
+    Absence:
+      type: object
+      required: [person_id, start_date, end_date, type]
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        type: { type: string }
+        hours_per_day: { type: number, nullable: true }
+        notes: { type: string, nullable: true }
+    Project:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, format: uuid }
+        org_id: { type: string, format: uuid }
+        key: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [proposed, active, paused, done, cancelled] }
+        priority: { type: integer }
+        start_date: { type: string, format: date, nullable: true }
+        end_date: { type: string, format: date, nullable: true }
+        owner_id: { type: string, format: uuid, nullable: true }
+        team_id: { type: string, format: uuid, nullable: true }
+        tags:
+          type: array
+          items: { type: string }
+    Epic:
+      type: object
+      required: [project_id, name]
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string }
+        order_index: { type: integer }
+    Task:
+      type: object
+      required: [project_id, title]
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        epic_id: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [todo, in_progress, blocked, done, cancelled] }
+        estimate_hours: { type: number, nullable: true }
+        start_date: { type: string, format: date, nullable: true }
+        due_date: { type: string, format: date, nullable: true }
+        tags:
+          type: array
+          items: { type: string }
+        order_index: { type: integer }
+    TaskAssignee:
+      type: object
+      required: [task_id, person_id]
+      properties:
+        id: { type: string, format: uuid }
+        task_id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+    Allocation:
+      type: object
+      required: [person_id, start_date, end_date]
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        task_id: { type: string, format: uuid, nullable: true }
+        person_id: { type: string, format: uuid }
+        start_date: { type: string, format: date }
+        end_date: { type: string, format: date }
+        percent: { type: number, nullable: true }
+        hours_per_week: { type: number, nullable: true }
+        source: { type: string, enum: [manual, import, rule] }
+        notes: { type: string, nullable: true }
+    Comment:
+      type: object
+      required: [entity_type, entity_id, body]
+      properties:
+        id: { type: string, format: uuid }
+        entity_type: { type: string, enum: [project, task] }
+        entity_id: { type: string, format: uuid }
+        author_id: { type: string, format: uuid }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
+    Attachment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+        filename: { type: string }
+        content_type: { type: string }
+        storage_key: { type: string }
+        size_bytes: { type: integer }
+        created_at: { type: string, format: date-time }
+    Tag:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        color: { type: string, nullable: true }
+    ExternalProvider:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        provider_key: { type: string, enum: [payfit, gryzzly, ticket_resto] }
+        name: { type: string }
+        capabilities:
+          type: object
+          additionalProperties: true
+    ExternalConnection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        provider_id: { type: string, format: uuid }
+        status: { type: string, enum: [connected, error, revoked] }
+        last_sync_at: { type: string, format: date-time, nullable: true }
+        error: { type: string, nullable: true }
+    ExternalAccount:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        provider_id: { type: string, format: uuid }
+        external_user_id: { type: string }
+        person_id: { type: string, format: uuid, nullable: true }
+        active: { type: boolean }
+        raw_profile: { type: object, additionalProperties: true }
+    IdentityMatch:
+      type: object
+      properties:
+        external_account_id: { type: string, format: uuid }
+        suggested_person_id: { type: string, format: uuid, nullable: true }
+        score: { type: number }
+        signals: { type: object, additionalProperties: true }
+    BenefitType:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        key: { type: string }
+        name: { type: string }
+    BenefitPolicy:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        benefit_type_id: { type: string, format: uuid }
+        rules: { type: object, additionalProperties: true }
+        active: { type: boolean }
+        effective_from: { type: string, format: date, nullable: true }
+        effective_to: { type: string, format: date, nullable: true }
+    PersonBenefit:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        person_id: { type: string, format: uuid }
+        benefit_type_id: { type: string, format: uuid }
+        eligible: { type: boolean }
+        effective_from: { type: string, format: date }
+        effective_to: { type: string, format: date, nullable: true }
+        source: { type: string, enum: [policy, manual] }
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Tokens and user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  user: { type: object }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }}}}
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh JWT tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+
+  /me:
+    get:
+      tags: [Auth]
+      summary: Get current profile
+      responses:
+        '200': { description: OK }
+
+  /orgs:
+    get:
+      tags: [Orgs]
+      summary: List organizations
+      parameters: [ { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PageSize' } ]
+      responses:
+        '200':
+          description: List of orgs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Organization' }
+                  total: { type: integer }
+    post:
+      tags: [Orgs]
+      summary: Create organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Organization' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Organization' }}}}
+
+  /orgs/{id}:
+    get:
+      tags: [Orgs]
+      summary: Get organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Organization' }}}}
+    patch:
+      tags: [Orgs]
+      summary: Patch organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Organization' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Orgs]
+      summary: Soft delete organization
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /people:
+    get:
+      tags: [People]
+      summary: List people
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of people
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Person' }
+                  total: { type: integer }
+    post:
+      tags: [People]
+      summary: Create person
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Person' }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Person' }}}}
+
+  /people/{id}:
+    get:
+      tags: [People]
+      summary: Get person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Person' }}}}
+    patch:
+      tags: [People]
+      summary: Patch person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Person' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [People]
+      summary: Soft delete person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /teams:
+    get:
+      tags: [Teams]
+      summary: List teams
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Teams]
+      summary: Create team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Team' }
+      responses:
+        '201': { description: Created }
+
+  /teams/{id}:
+    get:
+      tags: [Teams]
+      summary: Get team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    patch:
+      tags: [Teams]
+      summary: Patch team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Team' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Teams]
+      summary: Delete team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /teams/{id}/members:
+    post:
+      tags: [Teams]
+      summary: Add member to team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person_id, active_from]
+              properties:
+                person_id: { type: string, format: uuid }
+                active_from: { type: string, format: date }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/TeamMember' }}}}
+
+  /teams/{id}/members/{person_id}:
+    delete:
+      tags: [Teams]
+      summary: Remove member from team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: person_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /calendars:
+    get:
+      tags: [Calendars]
+      summary: List calendars
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Calendars]
+      summary: Create calendar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Calendar' }
+      responses:
+        '201': { description: Created }
+
+  /calendars/{id}:
+    get:
+      tags: [Calendars]
+      summary: Get calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    patch:
+      tags: [Calendars]
+      summary: Patch calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Calendar' }
+      responses:
+        '200': { description: Updated }
+
+  /calendars/{id}/holidays:
+    get:
+      tags: [Calendars]
+      summary: List holidays for calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Calendars]
+      summary: Add holiday to calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Holiday' }
+      responses:
+        '201': { description: Created }
+
+  /calendars/{id}/holidays/{holiday_id}:
+    delete:
+      tags: [Calendars]
+      summary: Delete holiday from calendar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: holiday_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /capacities:
+    get:
+      tags: [Calendars]
+      summary: List capacities
+      parameters:
+        - name: person_id
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Calendars]
+      summary: Create or upsert capacities (bulk supported)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Capacity'
+                - type: array
+                  items: { $ref: '#/components/schemas/Capacity' }
+      responses:
+        '201': { description: Created }
+
+  /absences:
+    get:
+      tags: [Calendars]
+      summary: List absences
+      parameters:
+        - name: person_id
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Calendars]
+      summary: Create absence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Absence' }
+      responses:
+        '201': { description: Created }
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Projects]
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Project' }
+      responses:
+        '201': { description: Created }
+
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    patch:
+      tags: [Projects]
+      summary: Patch project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Project' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Projects]
+      summary: Delete project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /projects/{id}/members:
+    post:
+      tags: [Projects]
+      summary: Add member to project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person_id]
+              properties:
+                person_id: { type: string, format: uuid }
+                role: { type: string }
+      responses:
+        '201': { description: Created }
+
+  /epics:
+    get:
+      tags: [Projects]
+      summary: List epics
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Projects]
+      summary: Create epic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Epic' }
+      responses:
+        '201': { description: Created }
+
+  /epics/{id}:
+    patch:
+      tags: [Projects]
+      summary: Patch epic
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Epic' }
+      responses:
+        '200': { description: Updated }
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      parameters:
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: assignee_person_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Tasks]
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Task' }
+      responses:
+        '201': { description: Created }
+
+  /tasks/{id}:
+    get:
+      tags: [Tasks]
+      summary: Get task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    patch:
+      tags: [Tasks]
+      summary: Patch task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Task' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Tasks]
+      summary: Delete task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /tasks/{id}/assignees:
+    post:
+      tags: [Tasks]
+      summary: Add assignee to task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person_id]
+              properties:
+                person_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Created }
+
+  /tasks/{id}/dependencies:
+    post:
+      tags: [Tasks]
+      summary: Add dependency to task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [depends_on_task_id, type]
+              properties:
+                depends_on_task_id: { type: string, format: uuid }
+                type: { type: string, enum: [blocks, relates] }
+      responses:
+        '201': { description: Created }
+
+  /allocations:
+    get:
+      tags: [Allocations]
+      summary: List allocations
+      parameters:
+        - name: person_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: project_id
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Allocations]
+      summary: Create allocation (single or bulk)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/Allocation'
+                - type: array
+                  items: { $ref: '#/components/schemas/Allocation' }
+      responses:
+        '201': { description: Created }
+
+  /allocations/{id}:
+    patch:
+      tags: [Allocations]
+      summary: Patch allocation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Allocation' }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Allocations]
+      summary: Delete allocation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+
+  /allocations:bulk-upsert:
+    post:
+      tags: [Allocations]
+      summary: Bulk upsert allocations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [allocations]
+              properties:
+                allocations:
+                  type: array
+                  items: { $ref: '#/components/schemas/Allocation' }
+                mode:
+                  type: string
+                  enum: [merge, replace]
+                  default: merge
+      responses:
+        '200': { description: Upserted }
+
+  /reports/utilization:
+    get:
+      tags: [Reports]
+      summary: Utilization report
+      parameters:
+        - name: group_by
+          in: query
+          required: true
+          schema: { type: string, enum: [team, person, project] }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200': { description: OK }
+
+  /reports/overbookings:
+    get:
+      tags: [Reports]
+      summary: Overbooking detection
+      parameters:
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200': { description: OK }
+
+  /reports/capacity-vs-load:
+    get:
+      tags: [Reports]
+      summary: Capacity vs load
+      parameters:
+        - name: team_id
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200': { description: OK }
+
+  /integrations/providers:
+    get:
+      tags: [Integrations]
+      summary: List supported providers
+      responses:
+        '200': { description: OK }
+
+  /integrations/connections:
+    get:
+      tags: [Integrations]
+      summary: List connections
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Integrations]
+      summary: Create/Update connection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExternalConnection' }
+      responses:
+        '201': { description: Created }
+
+  /integrations/{connection_id}/sync:
+    post:
+      tags: [Integrations]
+      summary: Trigger sync for a connection
+      parameters:
+        - name: connection_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: kind
+          in: query
+          required: true
+          schema: { type: string, enum: [roster, absences, timesheets] }
+        - name: dry_run
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '202': { description: Accepted }
+
+  /external-accounts:
+    get:
+      tags: [Identity]
+      summary: List external accounts
+      parameters:
+        - name: provider
+          in: query
+          schema: { type: string }
+        - name: unlinked
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200': { description: OK }
+
+  /external-accounts/{id}/link:
+    post:
+      tags: [Identity]
+      summary: Link external account to a person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person_id]
+              properties:
+                person_id: { type: string, format: uuid }
+                reason: { type: string, nullable: true }
+      responses:
+        '200': { description: Linked }
+
+  /identity/matches:
+    get:
+      tags: [Identity]
+      summary: List identity match suggestions
+      parameters:
+        - name: min_score
+          in: query
+          schema: { type: number, default: 0.6 }
+      responses:
+        '200': { description: OK }
+
+  /identity/resolve:
+    post:
+      tags: [Identity]
+      summary: Resolve identity matching decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [external_account_id, action]
+              properties:
+                external_account_id: { type: string, format: uuid }
+                action: { type: string, enum: [link, new, ignore] }
+                person_id: { type: string, format: uuid, nullable: true }
+                reason: { type: string, nullable: true }
+      responses:
+        '200': { description: Resolved }
+
+  /benefits/types:
+    get:
+      tags: [Benefits]
+      summary: List benefit types
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Benefits]
+      summary: Create benefit type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BenefitType' }
+      responses:
+        '201': { description: Created }
+
+  /benefits/policies:
+    get:
+      tags: [Benefits]
+      summary: List benefit policies
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Benefits]
+      summary: Create benefit policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BenefitPolicy' }
+      responses:
+        '201': { description: Created }
+
+  /benefits/policies/{id}:
+    patch:
+      tags: [Benefits]
+      summary: Patch benefit policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BenefitPolicy' }
+      responses:
+        '200': { description: Updated }
+
+  /people/{id}/benefits:
+    get:
+      tags: [Benefits]
+      summary: List person benefits
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Benefits]
+      summary: Override person benefit eligibility
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonBenefit' }
+      responses:
+        '201': { description: Created }
+

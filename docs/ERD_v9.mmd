@@ -1,0 +1,324 @@
+%% Mermaid ERD for Plan Charge v9 (Identity, Integrations, Planning)
+erDiagram
+  ORGANIZATIONS ||--o{ PEOPLE : "has"
+  ORGANIZATIONS ||--o{ TEAMS : "has"
+  ORGANIZATIONS ||--o{ PROJECTS : "has"
+  ORGANIZATIONS ||--o{ CALENDARS : "has"
+  ORGANIZATIONS ||--o{ EXTERNAL_PROVIDERS : "has"
+
+  PEOPLE ||--o{ PERSON_EMAILS : "owns"
+  PEOPLE ||--o{ PERSON_IDENTIFIERS : "owns"
+  PEOPLE ||--o{ ENGAGEMENTS : "has"
+  PEOPLE ||--o{ TEAM_MEMBERS : "joins"
+  PEOPLE ||--o{ CAPACITIES : "has"
+  PEOPLE ||--o{ ABSENCES : "has"
+  PEOPLE ||--o{ TASK_ASSIGNEES : "assigned to"
+  PEOPLE ||--o{ ALLOCATIONS : "allocated"
+  PEOPLE ||--o{ PERSON_BENEFITS : "benefits"
+
+  EXTERNAL_PROVIDERS ||--o{ EXTERNAL_CONNECTIONS : "configured"
+  EXTERNAL_PROVIDERS ||--o{ EXTERNAL_ACCOUNTS : "accounts"
+  EXTERNAL_CONNECTIONS ||--o{ SYNC_JOBS : "runs"
+  EXTERNAL_PROVIDERS ||--o{ STG_ROSTER : "staging"
+  EXTERNAL_PROVIDERS ||--o{ STG_ABSENCES : "staging"
+  EXTERNAL_PROVIDERS ||--o{ STG_TIMESHEETS : "staging"
+  EXTERNAL_PROVIDERS ||--o{ SYNC_EVENTS : "events"
+  EXTERNAL_ACCOUNTS }o--|| PEOPLE : "links"
+  EXTERNAL_ACCOUNTS ||--o{ IDENTITY_LINKS : "decisions"
+
+  TEAMS ||--o{ TEAM_MEMBERS : "has"
+  PROJECTS ||--o{ PROJECT_MEMBERS : "has"
+  PROJECTS ||--o{ EPICS : "has"
+  EPICS ||--o{ TASKS : "has"
+  TASKS ||--o{ TASK_ASSIGNEES : "has"
+  PROJECTS ||--o{ ALLOCATIONS : "allocates"
+  TASKS ||--o{ ALLOCATIONS : "allocates"
+
+  CALENDARS ||--o{ HOLIDAYS : "defines"
+  CALENDARS ||--o{ CAPACITIES : "overrides"
+
+  BENEFIT_TYPES ||--o{ BENEFIT_POLICIES : "rules"
+  BENEFIT_TYPES ||--o{ PERSON_BENEFITS : "applies"
+
+  ORGANIZATIONS {
+    uuid id PK
+    text name
+    text timezone
+    jsonb default_workweek
+  }
+  PEOPLE {
+    uuid id PK
+    uuid org_id FK
+    text full_name
+    bool active
+    uuid manager_id FK
+    text cost_center
+    text location
+    numeric weekly_hours_default
+    text source
+    timestamptz source_updated_at
+  }
+  PERSON_EMAILS {
+    uuid id PK
+    uuid org_id FK
+    uuid person_id FK
+    citext email
+    text kind
+    bool is_primary
+    bool verified
+    text source
+  }
+  PERSON_IDENTIFIERS {
+    uuid id PK
+    uuid org_id FK
+    uuid person_id FK
+    text id_type
+    text id_value
+    text source
+  }
+  ENGAGEMENTS {
+    uuid id PK
+    uuid org_id FK
+    uuid person_id FK
+    text type
+    date start_date
+    date end_date
+    numeric weekly_hours_default
+    bool payroll_eligible
+    text notes
+    text source
+    text external_contract_id
+  }
+  TEAMS {
+    uuid id PK
+    uuid org_id FK
+    text name
+    uuid lead_id FK
+    text color
+  }
+  TEAM_MEMBERS {
+    uuid id PK
+    uuid org_id FK
+    uuid team_id FK
+    uuid person_id FK
+    date active_from
+    date active_to
+    text role_in_team
+  }
+  CALENDARS {
+    uuid id PK
+    uuid org_id FK
+    text name
+    jsonb workweek
+  }
+  HOLIDAYS {
+    uuid id PK
+    uuid org_id FK
+    uuid calendar_id FK
+    date date
+    text label
+    bool is_full_day
+    numeric hours
+  }
+  CAPACITIES {
+    uuid id PK
+    uuid org_id FK
+    uuid person_id FK
+    uuid calendar_id FK
+    date period_start
+    date period_end
+    numeric hours_per_week
+    text notes
+  }
+  ABSENCES {
+    uuid id PK
+    uuid org_id FK
+    uuid person_id FK
+    date start_date
+    date end_date
+    text type
+    numeric hours_per_day
+    text notes
+  }
+  PROJECTS {
+    uuid id PK
+    uuid org_id FK
+    text name
+    text key
+    text status
+    int priority
+    date start_date
+    date end_date
+    uuid owner_id FK
+    uuid team_id FK
+    text[] tags
+  }
+  PROJECT_MEMBERS {
+    uuid id PK
+    uuid org_id FK
+    uuid project_id FK
+    uuid person_id FK
+    text role
+  }
+  EPICS {
+    uuid id PK
+    uuid org_id FK
+    uuid project_id FK
+    text name
+    text status
+    int order_index
+  }
+  TASKS {
+    uuid id PK
+    uuid org_id FK
+    uuid project_id FK
+    uuid epic_id FK
+    text title
+    text description
+    text status
+    numeric estimate_hours
+    date start_date
+    date due_date
+    text[] tags
+    int order_index
+    uuid created_by FK
+  }
+  TASK_ASSIGNEES {
+    uuid id PK
+    uuid org_id FK
+    uuid task_id FK
+    uuid person_id FK
+  }
+  ALLOCATIONS {
+    uuid id PK
+    uuid org_id FK
+    uuid project_id FK
+    uuid task_id FK
+    uuid person_id FK
+    date start_date
+    date end_date
+    numeric percent
+    numeric hours_per_week
+    text source
+    text notes
+  }
+  EXTERNAL_PROVIDERS {
+    uuid id PK
+    uuid org_id FK
+    text provider_key
+    text name
+    jsonb capabilities
+    text auth_type
+  }
+  EXTERNAL_CONNECTIONS {
+    uuid id PK
+    uuid org_id FK
+    uuid provider_id FK
+    text status
+    jsonb credentials
+    text webhook_secret
+    timestamptz last_sync_at
+    text error
+  }
+  EXTERNAL_ACCOUNTS {
+    uuid id PK
+    uuid org_id FK
+    uuid provider_id FK
+    text external_user_id
+    uuid person_id FK
+    jsonb raw_profile
+    bool active
+  }
+  STG_ROSTER {
+    uuid id PK
+    uuid provider_id FK
+    text external_user_id
+    jsonb payload
+    timestamptz seen_at
+  }
+  STG_ABSENCES {
+    uuid id PK
+    uuid provider_id FK
+    text external_absence_id
+    text user_external_id
+    date start_date
+    date end_date
+    text type
+    numeric hours_per_day
+    jsonb payload
+  }
+  STG_TIMESHEETS {
+    uuid id PK
+    uuid provider_id FK
+    text external_entry_id
+    text user_external_id
+    date date
+    numeric hours
+    text project_key
+    text task_title
+    jsonb payload
+  }
+  SYNC_JOBS {
+    uuid id PK
+    uuid org_id FK
+    uuid provider_id FK
+    text kind
+    text state
+    timestamptz started_at
+    timestamptz finished_at
+    jsonb stats
+  }
+  SYNC_EVENTS {
+    uuid id PK
+    uuid org_id FK
+    uuid provider_id FK
+    text event_type
+    text external_id
+    jsonb payload
+    timestamptz received_at
+  }
+  IDENTITY_LINKS {
+    uuid id PK
+    uuid org_id FK
+    uuid external_account_id FK
+    uuid person_id FK
+    text action
+    text reason
+    numeric score
+    uuid decided_by
+    timestamptz decided_at
+  }
+  IDENTITY_MATCH_RULES {
+    uuid id PK
+    uuid org_id FK
+    jsonb rule
+    uuid created_by
+    timestamptz created_at
+  }
+  BENEFIT_TYPES {
+    uuid id PK
+    uuid org_id FK
+    text key
+    text name
+  }
+  BENEFIT_POLICIES {
+    uuid id PK
+    uuid org_id FK
+    uuid benefit_type_id FK
+    jsonb rules
+    bool active
+    date effective_from
+    date effective_to
+  }
+  PERSON_BENEFITS {
+    uuid id PK
+    uuid org_id FK
+    uuid person_id FK
+    uuid benefit_type_id FK
+    bool eligible
+    date effective_from
+    date effective_to
+    text source
+    text reason
+  }
+
