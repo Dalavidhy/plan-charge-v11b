@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:14-alpine
+    container_name: plancharge-postgres-test
+    environment:
+      POSTGRES_DB: plancharge_test
+      POSTGRES_USER: plancharge_test
+      POSTGRES_PASSWORD: plancharge_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plancharge_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - plancharge-test-network
+
+  redis-test:
+    image: redis:7-alpine
+    container_name: plancharge-redis-test
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - plancharge-test-network
+
+  backend-test:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: testing
+    container_name: plancharge-backend-test
+    environment:
+      DATABASE_URL: postgresql://plancharge_test:plancharge_test@postgres-test:5432/plancharge_test
+      REDIS_URL: redis://redis-test:6379/0
+      JWT_SECRET_KEY: test-secret-key
+      ENVIRONMENT: testing
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./backend:/app
+      - ./backend/tests:/app/tests
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: pytest -v --cov=app --cov-report=html --cov-report=term
+    networks:
+      - plancharge-test-network
+
+networks:
+  plancharge-test-network:
+    driver: bridge

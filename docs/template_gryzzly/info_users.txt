@@ -1,0 +1,142 @@
+
+Matricule
+Titre
+Nom
+Prénom
+Adresse Email
+Actif
+Solde
+1
+M.
+AL HYAR
+David
+david.alhyar@nda-partners.com
+Actif
+
+149,29 €
+
+16
+M.
+ATTIA
+Malek
+malek.attia@nda-partners.com
+Actif
+
+0,00 €
+
+11
+M.
+BENOUATTAF
+Sami
+sami.benouattaf@nda-partners.com
+Actif
+
+141,56 €
+
+17
+M.
+DERUY
+Thomas
+thomas.deruy@nda-partners.com
+Actif
+
+22,01 €
+
+15
+Mme
+EL KOURDI
+Soukaïna
+soukaina.elkourdi@nda-partners.com
+Actif
+
+0,00 €
+
+7
+M.
+ELOUARDI
+Mohammed elmehdi
+mohammed-elmehdi.elouardi@nda-partners.com
+Actif
+
+203,57 €
+
+14
+M.
+FERROUKHI
+Naïl
+nail.ferroukhi@nda-partners.com
+Actif
+
+133,20 €
+
+112
+M.
+GUILLOTOU DE KERÉVER
+Bérenger
+berenger.de-kerever@nda-partners.com
+Actif
+
+27,89 €
+
+9
+M.
+KERVOAS
+Efflam
+efflam.kervoas@nda-partners.com
+Actif
+
+19,11 €
+
+5
+M.
+LE PENNEC
+Tristan
+tristan.lepennec@nda-partners.com
+Actif
+
+203,72 €
+
+12
+M.
+LINCK
+Alexandre
+alexandre.linck@nda-partners.com
+Actif
+
+33,87 €
+
+2
+M.
+MIRZAIAN
+Vincent
+vincent.mirzaian@nda-partners.com
+Actif
+
+300,11 €
+
+19
+Mme
+PATUREAU
+Valérie
+valerie.patureau@nda-partners.com
+Actif
+
+0,00 €
+
+8
+M.
+RODRIGUES
+Maxime
+maxime.rodrigues@nda-partners.com
+Actif
+
+0,00 €
+
+3
+Mme
+ZAVLYANOVA
+Maria
+maria.zavlyanova@nda-partners.com
+Actif
+
+0,00 €

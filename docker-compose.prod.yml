@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: plancharge-postgres-prod
+    environment:
+      POSTGRES_DB: plancharge
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - plancharge-prod-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: plancharge-redis-prod
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data_prod:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "--auth", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - plancharge-prod-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: production
+    container_name: plancharge-backend-prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/plancharge
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ENVIRONMENT: production
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - plancharge-prod-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Plan Charge}
+        VITE_ENV: production
+    container_name: plancharge-frontend-prod
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - plancharge-prod-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  celery:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: production
+    container_name: plancharge-celery-prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/plancharge
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks worker --loglevel=info --concurrency=4
+    restart: always
+    networks:
+      - plancharge-prod-network
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: production
+    container_name: plancharge-celery-beat-prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/plancharge
+      REDIS_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks beat --loglevel=info
+    restart: always
+    networks:
+      - plancharge-prod-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: plancharge-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/certs:/etc/nginx/certs
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+    networks:
+      - plancharge-prod-network
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+
+networks:
+  plancharge-prod-network:
+    driver: bridge
