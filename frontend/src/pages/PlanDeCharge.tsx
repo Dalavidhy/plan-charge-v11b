@@ -74,7 +74,8 @@ export default function PlanDeCharge() {
   const fetchProjects = async () => {
     setLoadingProjects(true);
     try {
-      const projectsData = await forecastService.getProjectsWithTasks();
+      // Get all projects and tasks (including inactive ones) for planning purposes
+      const projectsData = await forecastService.getProjectsWithTasks(false);
       setProjects(projectsData);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -596,6 +597,7 @@ export default function PlanDeCharge() {
                             <SelectItem key={project.id} value={project.id}>
                               {project.name}
                               {project.code && ` (${project.code})`}
+                              {!project.is_active && " - Inactif"}
                             </SelectItem>
                           ))
                         )}
@@ -623,6 +625,7 @@ export default function PlanDeCharge() {
                           <SelectItem key={task.id} value={task.id}>
                             {task.name}
                             {task.code && ` (${task.code})`}
+                            {!task.is_active && " - Inactive"}
                           </SelectItem>
                         ))
                       )}
