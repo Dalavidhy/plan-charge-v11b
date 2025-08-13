@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Integer,
     JSON,
     Numeric,
     String,
@@ -55,7 +56,7 @@ class ExternalConnection(BaseModel):
     webhook_secret = Column(String(255), nullable=True)
     last_sync_at = Column(DateTime(timezone=True), nullable=True)
     error = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column(JSON, nullable=True)  # Renamed from metadata (reserved in SQLAlchemy 2.0)
     
     # Relationships
     provider = relationship("ExternalProvider", back_populates="connections")

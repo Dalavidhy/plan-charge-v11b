@@ -7,6 +7,24 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr
 
 
+class RegisterRequest(BaseModel):
+    """Register request schema."""
+    
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+
+
+class RegisterResponse(BaseModel):
+    """Register response schema."""
+    
+    id: UUID
+    email: EmailStr
+    full_name: str
+    message: str = "User registered successfully"
+
+
 class LoginRequest(BaseModel):
     """Login request schema."""
     

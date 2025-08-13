@@ -69,8 +69,26 @@ seed: ## Seed database with sample data
 	$(DOCKER_COMPOSE) exec backend python -m scripts.seed_data
 
 # Testing commands
-test: ## Run all tests
-	$(DOCKER_COMPOSE_TEST) up --abort-on-container-exit --exit-code-from backend-test
+test: ## Run all tests (build, auth, pages, API)
+	@./tests/run-all-tests.sh
+
+test-build: ## Test Docker build process
+	@echo "Testing Docker build..."
+	@$(DOCKER_COMPOSE) config --quiet
+	@$(DOCKER_COMPOSE) build --no-cache
+	@echo "✅ Build test passed"
+
+test-auth: ## Test authentication flow with curl
+	@echo "Testing authentication..."
+	@./tests/auth/test-auth-flow.sh
+
+test-pages: ## Test frontend page accessibility
+	@echo "Testing frontend pages..."
+	@./tests/frontend/test-pages.sh
+
+test-health: ## Test service health
+	@echo "Testing service health..."
+	@./tests/docker/wait-for-healthy.sh
 
 test-unit: ## Run unit tests
 	$(DOCKER_COMPOSE) exec backend pytest tests/unit -v
@@ -86,6 +104,9 @@ test-coverage: ## Run tests with coverage report
 
 test-watch: ## Run tests in watch mode
 	$(DOCKER_COMPOSE) exec backend ptw
+
+test-all: test-health test-auth test-pages ## Run all validation tests
+	@echo "✅ All tests passed!"
 
 # Code quality commands
 lint: ## Run linting

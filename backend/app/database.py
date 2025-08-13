@@ -4,7 +4,7 @@ from typing import AsyncGenerator, Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 from app.config import settings
@@ -46,7 +46,9 @@ SessionLocal = sessionmaker(
 )
 
 # Base class for models
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """Base class for all models."""
+    __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

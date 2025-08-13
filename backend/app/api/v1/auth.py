@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_async_session
 from app.dependencies import get_current_active_user
-from app.models import User, UserOrgRole, RefreshToken
+from app.models import User, UserOrgRole, RefreshToken, Organization
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -21,6 +21,8 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     ChangePasswordRequest,
     UserInfo,
+    RegisterRequest,
+    RegisterResponse,
 )
 from app.utils.security import (
     verify_password,
@@ -31,6 +33,57 @@ from app.utils.security import (
 )
 
 router = APIRouter()
+
+
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    request: RegisterRequest,
+    session: AsyncSession = Depends(get_async_session),
+) -> RegisterResponse:
+    """Register a new user."""
+    # Check if user already exists
+    query = select(User).where(User.email == request.email)
+    result = await session.execute(query)
+    existing_user = result.scalar_one_or_none()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists",
+        )
+    
+    # Get or create default organization
+    org_query = select(Organization).where(Organization.name == "Default Organization")
+    org_result = await session.execute(org_query)
+    organization = org_result.scalar_one_or_none()
+    
+    if not organization:
+        organization = Organization(
+            name="Default Organization",
+            timezone="Europe/Paris",
+        )
+        session.add(organization)
+        await session.flush()
+    
+    # Create new user
+    hashed_password = get_password_hash(request.password)
+    new_user = User(
+        email=request.email,
+        password_hash=hashed_password,
+        full_name=f"{request.first_name} {request.last_name}",
+        org_id=organization.id,
+        is_active=True,
+    )
+    
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+    
+    return RegisterResponse(
+        id=new_user.id,
+        email=new_user.email,
+        full_name=new_user.full_name,
+    )
 
 
 @router.post("/login", response_model=LoginResponse)

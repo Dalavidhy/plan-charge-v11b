@@ -29,6 +29,16 @@ from app.models.integration import (
 from app.models.benefit import BenefitType, BenefitPolicy, PersonBenefit
 from app.models.audit import AuditLog, RefreshToken, ApiToken
 from app.models.misc import Comment, Attachment, Tag, EntityTag
+from app.models.payfit import PayfitEmployee, PayfitContract, PayfitAbsence, PayfitSyncLog
+from app.models.gryzzly import (
+    GryzzlyCollaborator,
+    GryzzlyProject,
+    GryzzlyTask,
+    GryzzlyDeclaration,
+    GryzzlyCollaboratorProject,
+    GryzzlySyncLog
+)
+from app.models.tr_eligibility import TREligibilityOverride
 
 __all__ = [
     # Base
@@ -86,4 +96,18 @@ __all__ = [
     "Attachment",
     "Tag",
     "EntityTag",
+    # Payfit
+    "PayfitEmployee",
+    "PayfitContract",
+    "PayfitAbsence",
+    "PayfitSyncLog",
+    # Gryzzly
+    "GryzzlyCollaborator",
+    "GryzzlyProject",
+    "GryzzlyTask",
+    "GryzzlyDeclaration",
+    "GryzzlyCollaboratorProject",
+    "GryzzlySyncLog",
+    # TR Eligibility
+    "TREligibilityOverride",
 ]

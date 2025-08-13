@@ -1,15 +1,17 @@
 # Multi-stage Dockerfile for Plan Charge backend
 
 # Base stage with Python and system dependencies
-FROM python:3.11-alpine AS base
+FROM python:3.11-slim AS base
 
-# Install system dependencies
-RUN apk add --no-cache \
+# Install system dependencies including C++ compiler for numpy and other packages
+RUN apt-get update && apt-get install -y \
     gcc \
-    musl-dev \
-    libffi-dev \
-    postgresql-dev \
-    curl
+    g++ \
+    libpq-dev \
+    curl \
+    make \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

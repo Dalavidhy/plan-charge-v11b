@@ -15,8 +15,10 @@ from app.database import Base
 class TimestampMixin:
     """Mixin for created_at and updated_at timestamps."""
     
+    __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
+    
     @declared_attr
-    def created_at(cls) -> Column:
+    def created_at(cls):
         return Column(
             DateTime(timezone=True),
             nullable=False,
@@ -25,7 +27,7 @@ class TimestampMixin:
         )
     
     @declared_attr
-    def updated_at(cls) -> Column:
+    def updated_at(cls):
         return Column(
             DateTime(timezone=True),
             nullable=False,
@@ -38,8 +40,10 @@ class TimestampMixin:
 class SoftDeleteMixin:
     """Mixin for soft delete functionality."""
     
+    __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
+    
     @declared_attr
-    def deleted_at(cls) -> Column:
+    def deleted_at(cls):
         return Column(DateTime(timezone=True), nullable=True, index=True)
     
     @property
@@ -65,6 +69,7 @@ class BaseModel(Base, TimestampMixin):
     """Base model with common fields."""
     
     __abstract__ = True
+    __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
     
     id = Column(
         UUID(as_uuid=True),

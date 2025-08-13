@@ -10,6 +10,7 @@ class Organization(BaseModel, SoftDeleteMixin):
     """Organization model."""
     
     __tablename__ = "organizations"
+    __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
     
     name = Column(String(255), nullable=False, unique=True, index=True)
     timezone = Column(String(50), nullable=False, default="Europe/Paris")

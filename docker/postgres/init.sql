@@ -19,9 +19,7 @@ CREATE TYPE connection_status AS ENUM ('connected', 'error', 'revoked');
 -- Set default timezone
 SET timezone = 'UTC';
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_gin_projects_tags ON projects USING GIN (tags) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_gin_tasks_tags ON tasks USING GIN (tags) WHERE deleted_at IS NULL;
+-- Note: Indexes will be created by Alembic migrations after tables are created
 
 -- Add comments for documentation
 COMMENT ON DATABASE plancharge IS 'Plan Charge v9 - Multi-team resource planning and capacity management system';

@@ -52,17 +52,17 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     
     # CORS
-    CORS_ORIGINS: List[AnyHttpUrl] = []
+    CORS_ORIGINS: Union[str, List[str]] = []
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["*"]
     CORS_ALLOW_HEADERS: List[str] = ["*"]
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        elif isinstance(v, list):
             return v
         raise ValueError(v)
     
@@ -163,11 +163,6 @@ class Settings(BaseSettings):
     def get_feature_flag(self, flag_name: str) -> bool:
         """Get feature flag value."""
         return getattr(self, f"FEATURE_{flag_name.upper()}", False)
-    
-    class Config:
-        """Pydantic config."""
-        case_sensitive = True
-        env_file = ".env"
 
 
 @lru_cache()

@@ -157,9 +157,10 @@ class User(BaseModel, SoftDeleteMixin):
     person = relationship("Person", back_populates="user")
     roles = relationship("UserOrgRole", back_populates="user", cascade="all, delete-orphan")
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
-    api_tokens = relationship("ApiToken", back_populates="created_by", cascade="all, delete-orphan")
+    api_tokens = relationship("ApiToken", back_populates="created_by_user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="actor")
     comments = relationship("Comment", back_populates="author")
+    payfit_employee = relationship("PayfitEmployee", back_populates="local_user", uselist=False)
     
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email})>"
