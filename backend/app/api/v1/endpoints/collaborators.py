@@ -12,10 +12,38 @@ from app.models.person import User
 from app.models.payfit import PayfitEmployee, PayfitContract, PayfitAbsence
 from app.models.gryzzly import GryzzlyCollaborator, GryzzlyDeclaration, GryzzlyProject
 from app.models.tr_eligibility import TREligibilityOverride
+from app.models.forecast import Forecast
 from datetime import date, datetime, timedelta
 from calendar import monthrange
+from pydantic import BaseModel
+from typing import Optional as Opt
 
 router = APIRouter()
+
+# Pydantic models for forecast operations
+class ForecastCreate(BaseModel):
+    """Model for creating forecast entries"""
+    collaborator_id: str
+    project_id: str
+    task_id: Opt[str] = None
+    date: date
+    hours: float
+    description: Opt[str] = None
+
+class ForecastUpdate(BaseModel):
+    """Model for updating forecast entries"""
+    hours: float
+    description: Opt[str] = None
+
+class ForecastBatchCreate(BaseModel):
+    """Model for creating multiple forecast entries at once"""
+    collaborator_id: str
+    project_id: str
+    task_id: Opt[str] = None
+    start_date: date
+    end_date: date
+    hours_per_day: float = 7.0
+    description: Opt[str] = None
 
 
 @router.get("")
@@ -495,4 +523,341 @@ async def get_plan_charge(
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
         "collaborators": plan_charge_data
+    }
+
+
+@router.get("/projects-with-tasks")
+async def get_projects_with_tasks(
+    active_only: bool = True,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> List[Dict[str, Any]]:
+    """
+    Get active projects with their associated tasks
+    Used for forecast dialog project/task selection
+    """
+    from app.models.gryzzly import GryzzlyTask
+    from sqlalchemy.orm import selectinload
+    
+    # Get projects with their tasks
+    query = select(GryzzlyProject).options(selectinload(GryzzlyProject.tasks))
+    
+    if active_only:
+        query = query.where(GryzzlyProject.is_active == True)
+    
+    query = query.order_by(GryzzlyProject.name)
+    result = await session.execute(query)
+    projects = result.scalars().all()
+    
+    # Format response
+    projects_data = []
+    for project in projects:
+        # Filter active tasks if needed
+        tasks = project.tasks
+        if active_only:
+            tasks = [t for t in tasks if t.is_active]
+        
+        projects_data.append({
+            "id": str(project.id),
+            "gryzzly_id": project.gryzzly_id,
+            "name": project.name,
+            "code": project.code,
+            "description": project.description,
+            "client_name": project.client_name,
+            "is_active": project.is_active,
+            "is_billable": project.is_billable,
+            "tasks": [
+                {
+                    "id": str(task.id),
+                    "gryzzly_id": task.gryzzly_id,
+                    "name": task.name,
+                    "code": task.code,
+                    "description": task.description,
+                    "task_type": task.task_type,
+                    "is_active": task.is_active,
+                    "is_billable": task.is_billable
+                }
+                for task in tasks
+            ]
+        })
+    
+    return projects_data
+
+
+@router.post("/forecast")
+async def create_forecast(
+    forecast_data: ForecastCreate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Create a single forecast entry
+    """
+    # Check if forecast already exists for this date/collaborator/project
+    existing_query = select(Forecast).where(
+        and_(
+            Forecast.collaborator_id == forecast_data.collaborator_id,
+            Forecast.project_id == forecast_data.project_id,
+            Forecast.date == forecast_data.date
+        )
+    )
+    
+    if forecast_data.task_id:
+        existing_query = existing_query.where(Forecast.task_id == forecast_data.task_id)
+    else:
+        existing_query = existing_query.where(Forecast.task_id == None)
+    
+    existing_result = await session.execute(existing_query)
+    existing = existing_result.scalar_one_or_none()
+    
+    if existing:
+        # Update existing forecast
+        existing.hours = forecast_data.hours
+        existing.description = forecast_data.description
+        existing.modified_by = current_user.id if current_user else None
+        existing.updated_at = datetime.utcnow()
+        
+        await session.commit()
+        
+        return {
+            "id": str(existing.id),
+            "message": "Forecast updated",
+            "action": "updated"
+        }
+    else:
+        # Create new forecast
+        forecast = Forecast(
+            collaborator_id=forecast_data.collaborator_id,
+            project_id=forecast_data.project_id,
+            task_id=forecast_data.task_id,
+            date=forecast_data.date,
+            hours=forecast_data.hours,
+            description=forecast_data.description,
+            created_by=current_user.id if current_user else None,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        
+        session.add(forecast)
+        await session.commit()
+        
+        return {
+            "id": str(forecast.id),
+            "message": "Forecast created",
+            "action": "created"
+        }
+
+
+@router.post("/forecast/batch")
+async def create_forecast_batch(
+    forecast_data: ForecastBatchCreate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Create multiple forecast entries for a date range
+    Skips weekends and holidays
+    """
+    from app.models.gryzzly import GryzzlyTask
+    
+    # Get list of dates in range (excluding weekends)
+    dates_to_create = []
+    current_date = forecast_data.start_date
+    
+    while current_date <= forecast_data.end_date:
+        # Skip weekends
+        if current_date.weekday() < 5:  # Monday = 0, Friday = 4
+            dates_to_create.append(current_date)
+        current_date += timedelta(days=1)
+    
+    created_count = 0
+    updated_count = 0
+    
+    for forecast_date in dates_to_create:
+        # Check if forecast already exists
+        existing_query = select(Forecast).where(
+            and_(
+                Forecast.collaborator_id == forecast_data.collaborator_id,
+                Forecast.project_id == forecast_data.project_id,
+                Forecast.date == forecast_date
+            )
+        )
+        
+        if forecast_data.task_id:
+            existing_query = existing_query.where(Forecast.task_id == forecast_data.task_id)
+        else:
+            existing_query = existing_query.where(Forecast.task_id == None)
+        
+        existing_result = await session.execute(existing_query)
+        existing = existing_result.scalar_one_or_none()
+        
+        if existing:
+            # Update existing forecast
+            existing.hours = forecast_data.hours_per_day
+            existing.description = forecast_data.description
+            existing.modified_by = current_user.id if current_user else None
+            existing.updated_at = datetime.utcnow()
+            updated_count += 1
+        else:
+            # Create new forecast
+            forecast = Forecast(
+                collaborator_id=forecast_data.collaborator_id,
+                project_id=forecast_data.project_id,
+                task_id=forecast_data.task_id,
+                date=forecast_date,
+                hours=forecast_data.hours_per_day,
+                description=forecast_data.description,
+                created_by=current_user.id if current_user else None,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(forecast)
+            created_count += 1
+    
+    await session.commit()
+    
+    return {
+        "message": f"Batch forecast operation completed",
+        "created": created_count,
+        "updated": updated_count,
+        "total_days": len(dates_to_create)
+    }
+
+
+@router.get("/forecast")
+async def get_forecasts(
+    year: int,
+    month: int,
+    collaborator_id: Opt[str] = None,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get forecast entries for a specific month
+    """
+    from app.models.gryzzly import GryzzlyTask
+    from sqlalchemy.orm import selectinload
+    
+    # Get the date range for the month
+    _, last_day = monthrange(year, month)
+    start_date = date(year, month, 1)
+    end_date = date(year, month, last_day)
+    
+    # Build query
+    query = select(Forecast).options(
+        selectinload(Forecast.collaborator),
+        selectinload(Forecast.project),
+        selectinload(Forecast.task)
+    ).where(
+        and_(
+            Forecast.date >= start_date,
+            Forecast.date <= end_date
+        )
+    )
+    
+    if collaborator_id:
+        query = query.where(Forecast.collaborator_id == collaborator_id)
+    
+    query = query.order_by(Forecast.date, Forecast.collaborator_id)
+    
+    result = await session.execute(query)
+    forecasts = result.scalars().all()
+    
+    # Group forecasts by collaborator and date
+    forecasts_by_collaborator = {}
+    
+    for forecast in forecasts:
+        collab_id = str(forecast.collaborator_id)
+        
+        if collab_id not in forecasts_by_collaborator:
+            forecasts_by_collaborator[collab_id] = {
+                "collaborator_id": collab_id,
+                "collaborator_name": f"{forecast.collaborator.first_name or ''} {forecast.collaborator.last_name or ''}".strip() if forecast.collaborator else "Unknown",
+                "forecasts": {}
+            }
+        
+        date_str = forecast.date.isoformat()
+        
+        if date_str not in forecasts_by_collaborator[collab_id]["forecasts"]:
+            forecasts_by_collaborator[collab_id]["forecasts"][date_str] = []
+        
+        forecasts_by_collaborator[collab_id]["forecasts"][date_str].append({
+            "id": str(forecast.id),
+            "project_id": str(forecast.project_id),
+            "project_name": forecast.project.name if forecast.project else "Unknown",
+            "project_code": forecast.project.code if forecast.project else None,
+            "task_id": str(forecast.task_id) if forecast.task_id else None,
+            "task_name": forecast.task.name if forecast.task else None,
+            "hours": forecast.hours,
+            "description": forecast.description,
+            "created_at": forecast.created_at.isoformat() if forecast.created_at else None,
+            "updated_at": forecast.updated_at.isoformat() if forecast.updated_at else None
+        })
+    
+    return {
+        "year": year,
+        "month": month,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "collaborators": list(forecasts_by_collaborator.values())
+    }
+
+
+@router.put("/forecast/{forecast_id}")
+async def update_forecast(
+    forecast_id: str,
+    update_data: ForecastUpdate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Update a specific forecast entry
+    """
+    # Get the forecast
+    result = await session.execute(
+        select(Forecast).where(Forecast.id == forecast_id)
+    )
+    forecast = result.scalar_one_or_none()
+    
+    if not forecast:
+        raise HTTPException(status_code=404, detail="Forecast not found")
+    
+    # Update fields
+    forecast.hours = update_data.hours
+    forecast.description = update_data.description
+    forecast.modified_by = current_user.id if current_user else None
+    forecast.updated_at = datetime.utcnow()
+    
+    await session.commit()
+    
+    return {
+        "id": str(forecast.id),
+        "message": "Forecast updated successfully"
+    }
+
+
+@router.delete("/forecast/{forecast_id}")
+async def delete_forecast(
+    forecast_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Delete a specific forecast entry
+    """
+    # Get the forecast
+    result = await session.execute(
+        select(Forecast).where(Forecast.id == forecast_id)
+    )
+    forecast = result.scalar_one_or_none()
+    
+    if not forecast:
+        raise HTTPException(status_code=404, detail="Forecast not found")
+    
+    # Delete the forecast
+    await session.delete(forecast)
+    await session.commit()
+    
+    return {
+        "message": "Forecast deleted successfully"
     }

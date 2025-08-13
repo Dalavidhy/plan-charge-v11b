@@ -39,6 +39,7 @@ from app.models.gryzzly import (
     GryzzlySyncLog
 )
 from app.models.tr_eligibility import TREligibilityOverride
+from app.models.forecast import Forecast
 
 __all__ = [
     # Base
@@ -110,4 +111,6 @@ __all__ = [
     "GryzzlySyncLog",
     # TR Eligibility
     "TREligibilityOverride",
+    # Forecast
+    "Forecast",
 ]

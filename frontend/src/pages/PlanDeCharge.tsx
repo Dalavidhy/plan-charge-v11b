@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, ChevronLeft, Plus, Loader2 } from "lucide-react";
 import planChargeService, { PlanChargeData, PlanChargeCollaborator } from "@/services/plancharge.service";
-import { useToast } from "@/hooks/use-toast";
+import forecastService, { ForecastProject, ForecastData, ForecastEntry } from "@/services/forecast.service";
+import { useToast } from "@/hooks/use-toast"
 
 function getDaysInMonth(year: number, monthIndex: number) {
   const date = new Date(year, monthIndex, 1);
@@ -41,6 +42,9 @@ export default function PlanDeCharge() {
   const [month, setMonth] = useState<string>(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
   const [loading, setLoading] = useState(false);
   const [planChargeData, setPlanChargeData] = useState<PlanChargeData | null>(null);
+  const [forecastData, setForecastData] = useState<ForecastData | null>(null);
+  const [projects, setProjects] = useState<ForecastProject[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   const { year, monthIndex } = useMemo(() => ({
     year: parseInt(month.split("-")[0]),
@@ -54,91 +58,119 @@ export default function PlanDeCharge() {
   // Gestion de l'ouverture/fermeture des lignes détaillées
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  // Prévisionnel détaillé par jour (mock local) : idCollaborateur -> { YYYY-MM-DD: jours }
-  const [dailyForecasts, setDailyForecasts] = useState<Record<string, Record<string, number>>>({});
-
+  // Helper function to create date key
   const dateKey = (d: number) => `${year}-${String(monthIndex+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-  const getDaily = (id: string, d: number) => dailyForecasts[id]?.[dateKey(d)] ?? 0;
-  const setDaily = (id: string, d: number, value: number) => {
-    setDailyForecasts((prev) => {
-      const date = dateKey(d);
-      const inner = { ...(prev[id] || {}) } as Record<string, number>;
-      if (value > 0) inner[date] = value; else delete inner[date];
-      const next = { ...prev, [id]: inner } as typeof prev;
-      // Met à jour le total mensuel existant dans le store
-      const prefix = `${year}-${String(monthIndex+1).padStart(2,'0')}-`;
-      const sum = Object.entries(inner)
-        .filter(([key]) => key.startsWith(prefix))
-        .reduce((acc, [, v]) => acc + (v || 0), 0);
-      dispatch({ type: 'SET_FORECAST', id, monthKey, value: Number(sum.toFixed(2)) });
-      return next;
-    });
-  };
-
-  // Prévisionnel par entrée (projet+tâche) stocké localement
-  const [forecastEntries, setForecastEntries] = useState<Record<string, Record<string, { project: string; task: string; hours: number }[]>>>({});
 
   // Dialogs state
   const [addOpen, setAddOpen] = useState(false);
   const [addUser, setAddUser] = useState<string | null>(null);
+  const [addCollaboratorId, setAddCollaboratorId] = useState<string | null>(null);
   const [addProject, setAddProject] = useState<string>("");
   const [addTask, setAddTask] = useState<string>("");
-  const [editTarget, setEditTarget] = useState<{ userId: string; date: string; index: number } | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ForecastProject | null>(null);
+  const [editTarget, setEditTarget] = useState<{ forecastId: string; hours: number; description?: string } | null>(null);
 
-  const recomputeMonthly = (userId: string) => {
-    const prefix = `${year}-${String(monthIndex+1).padStart(2,'0')}-`;
-    const sumHours = Object.entries(forecastEntries[userId] || {})
-      .filter(([d]) => d.startsWith(prefix))
-      .reduce((acc, [, arr]) => acc + arr.reduce((s, e) => s + (e.hours || 0), 0), 0);
-    dispatch({ type: 'SET_FORECAST', id: userId, monthKey, value: Number((sumHours / 7).toFixed(2)) });
-  };
-
-  const addForecastRange = (userId: string, project: string, task: string, startStr: string, endStr: string) => {
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return;
-    const next = { ...(forecastEntries[userId] || {}) } as Record<string, {project:string; task:string; hours:number}[]>;
-    const inMonth = (d: Date) => d.getFullYear() === year && d.getMonth() === monthIndex;
-    const isOff = (d: Date) => {
-      const meta = days.find(x => x.d === d.getDate());
-      return !meta || meta.isWeekend || meta.isHoliday;
-    };
-    const cursor = new Date(start);
-    while (cursor <= end) {
-      if (inMonth(cursor) && !isOff(cursor)) {
-        const dk = `${year}-${String(monthIndex+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
-        const list = next[dk] ? [...next[dk]] : [];
-        list.push({ project, task, hours: 7 });
-        next[dk] = list;
-      }
-      cursor.setDate(cursor.getDate() + 1);
+  // Fetch projects for forecast dialog
+  const fetchProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const projectsData = await forecastService.getProjectsWithTasks();
+      setProjects(projectsData);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les projets",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingProjects(false);
     }
-    setForecastEntries(prev => ({ ...prev, [userId]: next }));
-    setTimeout(() => recomputeMonthly(userId), 0);
   };
 
-  const updateForecastEntry = (userId: string, date: string, index: number, hours: number) => {
-    setForecastEntries(prev => {
-      const userMap = { ...(prev[userId] || {}) };
-      const list = userMap[date] ? [...userMap[date]] : [];
-      if (list[index]) {
-        list[index] = { ...list[index], hours };
-        userMap[date] = list;
-      }
-      return { ...prev, [userId]: userMap };
-    });
-    setTimeout(() => recomputeMonthly(userId), 0);
+  // Fetch forecast data
+  const fetchForecastData = async () => {
+    try {
+      const data = await forecastService.getForecasts(year, monthIndex + 1);
+      setForecastData(data);
+    } catch (error) {
+      console.error('Error fetching forecast data:', error);
+      // Silent fail - forecasts are optional
+    }
   };
 
-  const deleteForecastEntry = (userId: string, date: string, index: number) => {
-    setForecastEntries(prev => {
-      const userMap = { ...(prev[userId] || {}) };
-      const list = userMap[date] ? [...userMap[date]] : [];
-      list.splice(index, 1);
-      if (list.length > 0) userMap[date] = list; else delete userMap[date];
-      return { ...prev, [userId]: userMap };
-    });
-    setTimeout(() => recomputeMonthly(userId), 0);
+  // Add forecast range
+  const addForecastRange = async (collaboratorId: string, projectId: string, taskId: string | null, startStr: string, endStr: string, description?: string) => {
+    try {
+      const result = await forecastService.createForecastBatch({
+        collaborator_id: collaboratorId,
+        project_id: projectId,
+        task_id: taskId || undefined,
+        start_date: startStr,
+        end_date: endStr,
+        hours_per_day: 7,
+        description
+      });
+      
+      toast({
+        title: "Succès",
+        description: `${result.created} prévisionnels créés, ${result.updated} mis à jour`,
+      });
+      
+      // Refresh forecast data
+      await fetchForecastData();
+    } catch (error) {
+      console.error('Error creating forecast:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le prévisionnel",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Update forecast entry
+  const updateForecastEntry = async (forecastId: string, hours: number, description?: string) => {
+    try {
+      await forecastService.updateForecast(forecastId, { hours, description });
+      
+      toast({
+        title: "Succès",
+        description: "Prévisionnel mis à jour",
+      });
+      
+      // Refresh forecast data
+      await fetchForecastData();
+    } catch (error) {
+      console.error('Error updating forecast:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le prévisionnel",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Delete forecast entry
+  const deleteForecastEntry = async (forecastId: string) => {
+    try {
+      await forecastService.deleteForecast(forecastId);
+      
+      toast({
+        title: "Succès",
+        description: "Prévisionnel supprimé",
+      });
+      
+      // Refresh forecast data
+      await fetchForecastData();
+    } catch (error) {
+      console.error('Error deleting forecast:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le prévisionnel",
+        variant: "destructive",
+      });
+    }
   };
 
   // Fetch real data from backend
@@ -162,7 +194,13 @@ export default function PlanDeCharge() {
   // Fetch data when month changes
   useEffect(() => {
     fetchPlanChargeData();
+    fetchForecastData();
   }, [year, monthIndex]);
+
+  // Fetch projects once on mount
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   useEffect(() => {
     setSEO({
@@ -269,7 +307,26 @@ export default function PlanDeCharge() {
                           variant="ghost"
                           size="icon"
                           className="ml-2"
-                          onClick={() => { setAddUser(c.id); setAddProject(""); setAddTask(""); setAddOpen(true); }}
+                          onClick={() => { 
+                            // Find the matching Gryzzly collaborator ID
+                            const gryzzlyCollab = planChargeData?.collaborators.find(
+                              pc => pc.email.toLowerCase() === c.email.toLowerCase()
+                            );
+                            if (gryzzlyCollab) {
+                              setAddUser(c.id);
+                              setAddCollaboratorId(gryzzlyCollab.collaborator_id);
+                              setAddProject("");
+                              setAddTask("");
+                              setSelectedProject(null);
+                              setAddOpen(true);
+                            } else {
+                              toast({
+                                title: "Erreur",
+                                description: "Ce collaborateur n'est pas synchronisé avec Gryzzly",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
                           aria-label="Ajouter un prévisionnel"
                           title="Ajouter un prévisionnel"
                         >
@@ -366,19 +423,41 @@ export default function PlanDeCharge() {
                         hoursByDay,
                       }));
 
-                      // Prévisionnels groupés par projet – tâche
-                      const forecastsByLabel: Record<string, Record<string, number>> = {};
-                      Object.entries(forecastEntries[c.id] || {}).forEach(([date, list]) => {
-                        list.forEach((f) => {
-                          const label = `${f.project} – ${f.task}`;
-                          if (!forecastsByLabel[label]) forecastsByLabel[label] = {};
-                          forecastsByLabel[label][date] = (forecastsByLabel[label][date] || 0) + f.hours;
-                        });
-                      });
-                      const forecastLines = Object.entries(forecastsByLabel).map(([label, hoursByDay]) => ({
+                      // Get forecast data for this collaborator
+                      const collabForecasts: Record<string, Record<string, number>> = {};
+                      const forecastMeta: Record<string, { forecastId: string; description?: string }> = {};
+                      
+                      if (forecastData && planChargeCollab) {
+                        const collabForecast = forecastData.collaborators.find(
+                          fc => fc.collaborator_id === planChargeCollab.collaborator_id
+                        );
+                        
+                        if (collabForecast) {
+                          Object.entries(collabForecast.forecasts).forEach(([date, forecasts]) => {
+                            forecasts.forEach(forecast => {
+                              const label = forecast.task_name 
+                                ? `${forecast.project_name} – ${forecast.task_name}`
+                                : forecast.project_name;
+                              
+                              if (!collabForecasts[label]) collabForecasts[label] = {};
+                              collabForecasts[label][date] = (collabForecasts[label][date] || 0) + forecast.hours;
+                              
+                              // Store metadata for editing
+                              const metaKey = `${date}-${label}`;
+                              forecastMeta[metaKey] = { 
+                                forecastId: forecast.id, 
+                                description: forecast.description 
+                              };
+                            });
+                          });
+                        }
+                      }
+                      
+                      const forecastLines = Object.entries(collabForecasts).map(([label, hoursByDay]) => ({
                         label,
                         kind: 'forecast' as const,
                         hoursByDay,
+                        meta: forecastMeta
                       }));
 
                       // Sélectionne jusqu'à 4 lignes: Absences (si présente) + 3 projets max
@@ -413,15 +492,21 @@ export default function PlanDeCharge() {
 
                                 // Pour les prévisionnels, clic pour éditer
                                 const isEditable = line.kind === 'forecast' && !day.isWeekend && !day.isHoliday && hours > 0;
-                                if (isEditable) {
-                                  const dateList = forecastEntries[c.id]?.[dk] || [];
-                                  const idx = dateList.findIndex((f) => `${f.project} – ${f.task}` === line.label);
+                                if (isEditable && 'meta' in line) {
+                                  const metaKey = `${dk}-${line.label}`;
+                                  const meta = line.meta?.[metaKey];
                                   return (
                                     <td
                                       key={`${c.id}-line-${li}-${day.d}`}
                                       className={`${baseCell} ${color} cursor-pointer`}
                                       onClick={() => {
-                                        if (idx >= 0) setEditTarget({ userId: c.id, date: dk, index: idx });
+                                        if (meta) {
+                                          setEditTarget({ 
+                                            forecastId: meta.forecastId, 
+                                            hours,
+                                            description: meta.description 
+                                          });
+                                        }
                                       }}
                                       title="Modifier le prévisionnel"
                                     >
@@ -456,18 +541,26 @@ export default function PlanDeCharge() {
               <DialogTitle>Ajouter un prévisionnel</DialogTitle>
             </DialogHeader>
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
                 const start = String(fd.get('start') || '');
                 const end = String(fd.get('end') || '');
-                const project = addProject;
-                const task = addTask;
-                if (addUser && project && task && start && end) {
-                  addForecastRange(addUser, project, task, start, end);
+                const description = String(fd.get('description') || '');
+                
+                if (addCollaboratorId && addProject && start && end) {
+                  await addForecastRange(
+                    addCollaboratorId, 
+                    addProject, 
+                    addTask || null, 
+                    start, 
+                    end,
+                    description || undefined
+                  );
                   setAddOpen(false);
                   setAddProject("");
                   setAddTask("");
+                  setSelectedProject(null);
                 }
               }}
               className="space-y-3"
@@ -475,27 +568,64 @@ export default function PlanDeCharge() {
               <div className="grid gap-3">
                 <div className="grid gap-1">
                   <Label htmlFor="project">Projet</Label>
-                  <Select value={addProject} onValueChange={setAddProject}>
-                    <SelectTrigger id="project" aria-label="Projet">
-                      <SelectValue placeholder="Sélectionner un projet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Projet A">Projet A</SelectItem>
-                      <SelectItem value="Projet B">Projet B</SelectItem>
-                      <SelectItem value="Interne">Interne</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {loadingProjects ? (
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="ml-2 text-sm">Chargement des projets...</span>
+                    </div>
+                  ) : (
+                    <Select 
+                      value={addProject} 
+                      onValueChange={(value) => {
+                        setAddProject(value);
+                        const project = projects.find(p => p.id === value);
+                        setSelectedProject(project || null);
+                        setAddTask("");
+                      }}
+                    >
+                      <SelectTrigger id="project" aria-label="Projet">
+                        <SelectValue placeholder="Sélectionner un projet" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.length === 0 ? (
+                          <SelectItem value="none" disabled>
+                            Aucun projet disponible
+                          </SelectItem>
+                        ) : (
+                          projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                              {project.code && ` (${project.code})`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="grid gap-1">
-                  <Label htmlFor="task">Tâche</Label>
-                  <Select value={addTask} onValueChange={setAddTask}>
+                  <Label htmlFor="task">Tâche (optionnel)</Label>
+                  <Select 
+                    value={addTask} 
+                    onValueChange={setAddTask}
+                    disabled={!selectedProject || selectedProject.tasks.length === 0}
+                  >
                     <SelectTrigger id="task" aria-label="Tâche">
                       <SelectValue placeholder="Sélectionner une tâche" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Développement">Développement</SelectItem>
-                      <SelectItem value="Design">Design</SelectItem>
-                      <SelectItem value="Gestion de projet">Gestion de projet</SelectItem>
+                      {selectedProject?.tasks.length === 0 ? (
+                        <SelectItem value="none" disabled>
+                          Aucune tâche disponible
+                        </SelectItem>
+                      ) : (
+                        selectedProject?.tasks.map((task) => (
+                          <SelectItem key={task.id} value={task.id}>
+                            {task.name}
+                            {task.code && ` (${task.code})`}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -509,9 +639,15 @@ export default function PlanDeCharge() {
                     <Input id="end" name="end" type="date" required />
                   </div>
                 </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="description">Description (optionnel)</Label>
+                  <Input id="description" name="description" type="text" placeholder="Description du prévisionnel" />
+                </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Ajouter</Button>
+                <Button type="submit" disabled={loadingProjects || !addProject}>
+                  Ajouter
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -524,12 +660,17 @@ export default function PlanDeCharge() {
             </DialogHeader>
             {editTarget ? (
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   const fd = new FormData(e.currentTarget);
                   const hours = Number(fd.get('hours') || 0);
-                  if (!isNaN(hours)) {
-                    updateForecastEntry(editTarget.userId, editTarget.date, editTarget.index, hours);
+                  const description = String(fd.get('description') || '');
+                  if (!isNaN(hours) && hours > 0) {
+                    await updateForecastEntry(
+                      editTarget.forecastId, 
+                      hours, 
+                      description || undefined
+                    );
                     setEditTarget(null);
                   }
                 }}
@@ -543,17 +684,25 @@ export default function PlanDeCharge() {
                     type="number"
                     min={0}
                     step={0.5}
-                    defaultValue={
-                      forecastEntries[editTarget.userId]?.[editTarget.date]?.[editTarget.index]?.hours ?? 7
-                    }
+                    defaultValue={editTarget.hours || 7}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="description">Description (optionnel)</Label>
+                  <Input
+                    id="description"
+                    name="description"
+                    type="text"
+                    defaultValue={editTarget.description || ''}
+                    placeholder="Description du prévisionnel"
                   />
                 </div>
                 <DialogFooter>
                   <Button
                     type="button"
                     variant="destructive"
-                    onClick={() => {
-                      deleteForecastEntry(editTarget.userId, editTarget.date, editTarget.index);
+                    onClick={async () => {
+                      await deleteForecastEntry(editTarget.forecastId);
                       setEditTarget(null);
                     }}
                   >
