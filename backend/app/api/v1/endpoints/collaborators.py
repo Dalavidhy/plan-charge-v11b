@@ -10,13 +10,14 @@ from sqlalchemy.orm import selectinload
 from app.dependencies import get_current_user, get_async_session
 from app.models.person import User
 from app.models.payfit import PayfitEmployee, PayfitContract, PayfitAbsence
-from app.models.gryzzly import GryzzlyCollaborator, GryzzlyDeclaration, GryzzlyProject
+from app.models.gryzzly import GryzzlyCollaborator, GryzzlyDeclaration, GryzzlyProject, GryzzlyTask
 from app.models.tr_eligibility import TREligibilityOverride
 from app.models.forecast import Forecast
 from datetime import date, datetime, timedelta
 from calendar import monthrange
 from pydantic import BaseModel
 from typing import Optional as Opt
+import holidays
 
 router = APIRouter()
 
@@ -44,6 +45,10 @@ class ForecastBatchCreate(BaseModel):
     end_date: date
     hours_per_day: float = 7.0
     description: Opt[str] = None
+
+class ForecastGroupDelete(BaseModel):
+    """Model for deleting a group of forecast entries"""
+    forecast_ids: List[str]
 
 
 @router.get("")
@@ -355,10 +360,15 @@ async def get_plan_charge(
     Returns Gryzzly declarations and Payfit absences for all active collaborators
     """
     
-    # Get the date range for the month
+    # Get the date range for the month (for display)
     _, last_day = monthrange(year, month)
-    start_date = date(year, month, 1)
-    end_date = date(year, month, last_day)
+    month_start_date = date(year, month, 1)
+    month_end_date = date(year, month, last_day)
+    
+    # Query declarations from 6 months before to 6 months after the requested month
+    # This ensures we have data available when navigating between months
+    query_start_date = month_start_date - timedelta(days=180)
+    query_end_date = month_end_date + timedelta(days=180)
     
     # Get all active collaborators using the existing get_collaborators logic
     # Get all Gryzzly collaborators
@@ -384,14 +394,15 @@ async def get_plan_charge(
                 if emp.created_at > payfit_employees_by_email[email_lower].created_at:
                     payfit_employees_by_email[email_lower] = emp
     
-    # Get all Gryzzly declarations for the month with project info
+    # Get all Gryzzly declarations for the wider date range with project info
+    # We fetch 6 months before and after to have data ready for navigation
     declarations_query = select(GryzzlyDeclaration).options(
         selectinload(GryzzlyDeclaration.project),
         selectinload(GryzzlyDeclaration.collaborator)
     ).where(
         and_(
-            GryzzlyDeclaration.date >= start_date,
-            GryzzlyDeclaration.date <= end_date
+            GryzzlyDeclaration.date >= query_start_date,
+            GryzzlyDeclaration.date <= query_end_date
         )
     )
     declarations_result = await session.execute(declarations_query)
@@ -402,8 +413,8 @@ async def get_plan_charge(
         selectinload(PayfitAbsence.employee)
     ).where(
         and_(
-            PayfitAbsence.start_date <= end_date,
-            PayfitAbsence.end_date >= start_date,
+            PayfitAbsence.start_date <= month_end_date,
+            PayfitAbsence.end_date >= month_start_date,
             PayfitAbsence.status.in_(['approved', 'pending'])  # Only show approved or pending absences
         )
     )
@@ -421,10 +432,12 @@ async def get_plan_charge(
         email_lower = gryzzly_collab.email.lower()
         payfit_emp = payfit_employees_by_email.get(email_lower)
         
-        # Get declarations for this collaborator
+        # Get declarations for this collaborator within the requested month
         collab_declarations = [
             d for d in all_declarations 
             if d.collaborator_id == gryzzly_collab.id
+            and d.date >= month_start_date
+            and d.date <= month_end_date
         ]
         
         # Get absences for this collaborator (if they have a Payfit record)
@@ -456,8 +469,8 @@ async def get_plan_charge(
         absences_list = []
         for absence in collab_absences:
             # Calculate which days of the month this absence covers
-            absence_start = max(absence.start_date, start_date)
-            absence_end = min(absence.end_date, end_date)
+            absence_start = max(absence.start_date, month_start_date)
+            absence_end = min(absence.end_date, month_end_date)
             
             absences_list.append({
                 "type": absence.absence_type,
@@ -495,8 +508,8 @@ async def get_plan_charge(
         absences_list = []
         for absence in collab_absences:
             # Calculate which days of the month this absence covers
-            absence_start = max(absence.start_date, start_date)
-            absence_end = min(absence.end_date, end_date)
+            absence_start = max(absence.start_date, month_start_date)
+            absence_end = min(absence.end_date, month_end_date)
             
             absences_list.append({
                 "type": absence.absence_type,
@@ -520,8 +533,8 @@ async def get_plan_charge(
     return {
         "year": year,
         "month": month,
-        "start_date": start_date.isoformat(),
-        "end_date": end_date.isoformat(),
+        "start_date": month_start_date.isoformat(),
+        "end_date": month_end_date.isoformat(),
         "collaborators": plan_charge_data
     }
 
@@ -660,13 +673,14 @@ async def create_forecast_batch(
     """
     from app.models.gryzzly import GryzzlyTask
     
-    # Get list of dates in range (excluding weekends)
+    # Get list of dates in range (excluding weekends and holidays)
+    fr_holidays = holidays.France()
     dates_to_create = []
     current_date = forecast_data.start_date
     
     while current_date <= forecast_data.end_date:
-        # Skip weekends
-        if current_date.weekday() < 5:  # Monday = 0, Friday = 4
+        # Skip weekends and holidays
+        if current_date.weekday() < 5 and current_date not in fr_holidays:  # Monday = 0, Friday = 4
             dates_to_create.append(current_date)
         current_date += timedelta(days=1)
     
@@ -836,6 +850,35 @@ async def update_forecast(
     }
 
 
+@router.delete("/forecast/group")
+async def delete_forecast_group(
+    group_data: ForecastGroupDelete,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Delete a group of forecast entries
+    """
+    deleted_count = 0
+    
+    for forecast_id in group_data.forecast_ids:
+        result = await session.execute(
+            select(Forecast).where(Forecast.id == forecast_id)
+        )
+        forecast = result.scalar_one_or_none()
+        
+        if forecast:
+            await session.delete(forecast)
+            deleted_count += 1
+    
+    await session.commit()
+    
+    return {
+        "message": f"Deleted {deleted_count} forecast entries",
+        "deleted_count": deleted_count
+    }
+
+
 @router.delete("/forecast/{forecast_id}")
 async def delete_forecast(
     forecast_id: str,
@@ -860,4 +903,98 @@ async def delete_forecast(
     
     return {
         "message": "Forecast deleted successfully"
+    }
+
+
+@router.get("/forecast/{forecast_id}/group")
+async def get_forecast_group(
+    forecast_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get the group of forecasts that were created together.
+    Identifies forecasts that belong to the same batch based on:
+    - Same collaborator, project, task
+    - Same hours per day
+    - Same description
+    - Created within a small time window
+    """
+    from sqlalchemy import func
+    from datetime import timedelta
+    
+    # Get the reference forecast
+    result = await session.execute(
+        select(Forecast).where(Forecast.id == forecast_id)
+    )
+    reference_forecast = result.scalar_one_or_none()
+    
+    if not reference_forecast:
+        raise HTTPException(status_code=404, detail="Forecast not found")
+    
+    # Define time window for grouping (forecasts created within 2 seconds of each other)
+    time_window = timedelta(seconds=2)
+    min_time = reference_forecast.created_at - time_window
+    max_time = reference_forecast.created_at + time_window
+    
+    # Find all forecasts in the same group
+    group_query = select(Forecast).where(
+        and_(
+            Forecast.collaborator_id == reference_forecast.collaborator_id,
+            Forecast.project_id == reference_forecast.project_id,
+            Forecast.hours == reference_forecast.hours,
+            Forecast.created_at >= min_time,
+            Forecast.created_at <= max_time
+        )
+    )
+    
+    # Handle task_id (can be None)
+    if reference_forecast.task_id:
+        group_query = group_query.where(Forecast.task_id == reference_forecast.task_id)
+    else:
+        group_query = group_query.where(Forecast.task_id == None)
+    
+    # Handle description (can be None)
+    if reference_forecast.description:
+        group_query = group_query.where(Forecast.description == reference_forecast.description)
+    else:
+        group_query = group_query.where(Forecast.description == None)
+    
+    result = await session.execute(group_query.order_by(Forecast.date))
+    group_forecasts = result.scalars().all()
+    
+    if not group_forecasts:
+        # If no group found, return just the single forecast
+        group_forecasts = [reference_forecast]
+    
+    # Get min and max dates
+    dates = [f.date for f in group_forecasts]
+    start_date = min(dates)
+    end_date = max(dates)
+    
+    # Get project and task info
+    project_result = await session.execute(
+        select(GryzzlyProject).where(GryzzlyProject.id == reference_forecast.project_id)
+    )
+    project = project_result.scalar_one_or_none()
+    
+    task = None
+    if reference_forecast.task_id:
+        task_result = await session.execute(
+            select(GryzzlyTask).where(GryzzlyTask.id == reference_forecast.task_id)
+        )
+        task = task_result.scalar_one_or_none()
+    
+    return {
+        "forecast_ids": [str(f.id) for f in group_forecasts],
+        "collaborator_id": str(reference_forecast.collaborator_id),
+        "project_id": str(reference_forecast.project_id),
+        "project_name": project.name if project else None,
+        "task_id": str(reference_forecast.task_id) if reference_forecast.task_id else None,
+        "task_name": task.name if task else None,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "hours_per_day": reference_forecast.hours,
+        "description": reference_forecast.description,
+        "total_days": len(group_forecasts)
     }

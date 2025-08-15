@@ -55,15 +55,27 @@ export default function GryzzlyDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('📊 GryzzlyDashboard: Loading data...');
       const [statsData, statusData] = await Promise.all([
         gryzzlyService.getStats(),
         gryzzlyService.getStatus(),
       ]);
       setStats(statsData);
       setSyncStatus(statusData);
-    } catch (error) {
-      toast.error('Erreur lors du chargement des données Gryzzly');
-      console.error('Error loading Gryzzly data:', error);
+      console.log('✅ GryzzlyDashboard: Data loaded successfully', { statsData, statusData });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || 
+                          error?.response?.data?.message || 
+                          error?.message ||
+                          'Erreur lors du chargement des données Gryzzly';
+      toast.error(errorMessage);
+      console.error('❌ GryzzlyDashboard: Error loading data:', error);
+      console.error('📋 Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
     } finally {
       setLoading(false);
     }

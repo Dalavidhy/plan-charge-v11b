@@ -148,6 +148,7 @@ class User(BaseModel, SoftDeleteMixin):
     email = Column(CITEXT, nullable=False, index=True)
     full_name = Column(String(255), nullable=False)
     password_hash = Column(String(255), nullable=True)  # Nullable for SSO users
+    azure_id = Column(String(255), nullable=True, index=True)  # Azure AD Object ID
     locale = Column(String(10), nullable=False, default="fr")
     is_active = Column(Boolean, nullable=False, default=True)
     last_login_at = Column(DateTime(timezone=True), nullable=True)

@@ -24,6 +24,15 @@ from app.schemas.auth import (
     RegisterRequest,
     RegisterResponse,
 )
+from app.schemas.sso import (
+    SSOLoginRequest,
+    SSOLoginResponse,
+    SSOCallbackRequest,
+    SSOTokenResponse,
+    SSOLogoutRequest,
+    SSOLogoutResponse,
+    SSOStatusResponse,
+)
 from app.utils.security import (
     verify_password,
     get_password_hash,
@@ -31,6 +40,8 @@ from app.utils.security import (
     create_refresh_token,
     verify_token,
 )
+from app.services.azure_sso import azure_sso
+from app.config import settings
 
 router = APIRouter()
 
@@ -40,7 +51,13 @@ async def register(
     request: RegisterRequest,
     session: AsyncSession = Depends(get_async_session),
 ) -> RegisterResponse:
-    """Register a new user."""
+    """Register a new user - DISABLED when SSO is mandatory."""
+    if settings.SSO_MANDATORY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled. Please use SSO to authenticate.",
+        )
+    
     # Check if user already exists
     query = select(User).where(User.email == request.email)
     result = await session.execute(query)
@@ -91,7 +108,13 @@ async def login(
     request: LoginRequest,
     session: AsyncSession = Depends(get_async_session),
 ) -> LoginResponse:
-    """Login with email and password."""
+    """Login with email and password - DISABLED when SSO is mandatory."""
+    if settings.SSO_MANDATORY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Direct login is disabled. Please use SSO to authenticate.",
+        )
+    
     # Find user by email
     query = (
         select(User)
@@ -352,3 +375,202 @@ async def get_current_user_info(
         roles=[role.role for role in current_user.roles],
         person_id=current_user.person_id,
     )
+
+
+# SSO Endpoints
+@router.get("/sso/status", response_model=SSOStatusResponse)
+async def get_sso_status() -> SSOStatusResponse:
+    """Get SSO configuration status."""
+    return SSOStatusResponse(
+        enabled=settings.FEATURE_SSO,
+        configured=settings.azure_ad_configured,
+        provider="Azure AD",
+        login_url="/api/v1/auth/sso/login" if settings.azure_ad_configured else None,
+        mandatory=settings.SSO_MANDATORY,  # Add mandatory flag to response
+    )
+
+
+@router.post("/sso/login", response_model=SSOLoginResponse)
+async def sso_login(
+    request: SSOLoginRequest = SSOLoginRequest(),
+) -> SSOLoginResponse:
+    """Initiate SSO login flow."""
+    if not settings.FEATURE_SSO:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="SSO is not enabled",
+        )
+    
+    if not settings.azure_ad_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Azure AD is not configured",
+        )
+    
+    # Get authorization URL
+    auth_url = azure_sso.get_auth_url(state=request.state)
+    
+    return SSOLoginResponse(
+        auth_url=auth_url,
+        state=request.state,
+    )
+
+
+@router.post("/sso/token-exchange", response_model=SSOTokenResponse)
+async def sso_token_exchange(
+    request: dict,  # Will contain azureToken, idToken, userInfo
+    session: AsyncSession = Depends(get_async_session),
+) -> SSOTokenResponse:
+    """Exchange Azure AD tokens from frontend for backend tokens."""
+    import logging
+    import time
+    logger = logging.getLogger(__name__)
+    
+    if not settings.FEATURE_SSO or not settings.azure_ad_configured:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="SSO is not available",
+        )
+    
+    try:
+        # Extract data from frontend request
+        user_info = request.get("userInfo", {})
+        email = user_info.get("email")
+        name = user_info.get("name", "")
+        azure_id = user_info.get("id")
+        
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not found in user info"
+            )
+        
+        logger.info(f"SSO token exchange for user: {email}")
+        
+        # Create user info dict for get_or_create_user
+        azure_user_info = {
+            "oid": azure_id,
+            "preferred_username": email,
+            "name": name,
+            "email": email,
+        }
+        
+        # Get or create user
+        user = await azure_sso.get_or_create_user(azure_user_info, session)
+        
+        # Create application tokens
+        tokens = azure_sso.create_app_tokens(user)
+        
+        # Clean up old refresh tokens for this user to prevent duplicates
+        token_hash = hashlib.sha256(tokens["refresh_token"].encode()).hexdigest()
+        
+        # Try up to 3 times with a small delay to handle race conditions
+        for attempt in range(3):
+            try:
+                # First, try to delete any existing token with the same hash
+                delete_result = await session.execute(
+                    select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+                )
+                existing_token = delete_result.scalar_one_or_none()
+                
+                if existing_token:
+                    logger.warning(f"Found existing token with same hash (attempt {attempt + 1}), replacing it for user {user.email}")
+                    await session.delete(existing_token)
+                    await session.flush()  # Important: flush the deletion before adding new token
+                
+                # Also clean up old tokens for this user (keep only last 5)
+                old_tokens_query = (
+                    select(RefreshToken)
+                    .where(RefreshToken.user_id == user.id)
+                    .where(RefreshToken.revoked_at.is_(None))
+                    .order_by(RefreshToken.created_at.desc())
+                    .offset(4)  # Keep last 4, will add 1 new = 5 total
+                )
+                old_tokens_result = await session.execute(old_tokens_query)
+                for old_token in old_tokens_result.scalars():
+                    old_token.revoked_at = datetime.utcnow()
+                
+                # Store new refresh token
+                refresh_token = RefreshToken(
+                    user_id=user.id,
+                    org_id=user.org_id,
+                    token_hash=token_hash,
+                    expires_at=datetime.utcnow() + timedelta(days=30),
+                    device_info={
+                        "user_agent": "SSO Client",
+                        "provider": "Azure AD",
+                    },
+                )
+                session.add(refresh_token)
+                await session.commit()
+                logger.info(f"SSO login successful for user: {user.email}")
+                break  # Success, exit the retry loop
+                
+            except Exception as token_error:
+                if "duplicate key value" in str(token_error) and attempt < 2:
+                    logger.warning(f"Token duplicate error on attempt {attempt + 1}, retrying...")
+                    await session.rollback()
+                    time.sleep(0.1 * (attempt + 1))  # Small delay before retry
+                    # Generate a new token to avoid duplicates
+                    tokens = azure_sso.create_app_tokens(user)
+                    token_hash = hashlib.sha256(tokens["refresh_token"].encode()).hexdigest()
+                else:
+                    raise token_error
+        
+        # Load user relationships for response
+        await session.refresh(user, attribute_names=["roles", "person", "organization"])
+        
+        # Prepare user info
+        user_info = {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "org_id": str(user.org_id),
+            "roles": [role.role for role in user.roles],
+            "person_id": str(user.person_id) if user.person_id else None,
+        }
+        
+        return SSOTokenResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            token_type=tokens["token_type"],
+            user=user_info,
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"SSO callback error: {str(e)}", exc_info=True)
+        # Check if it's an Azure AD error
+        if "AADSTS" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Le code d'autorisation a déjà été utilisé ou est expiré. Veuillez réessayer."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"SSO authentication failed: {str(e)}"
+        )
+
+
+@router.post("/sso/logout", response_model=SSOLogoutResponse)
+async def sso_logout(
+    request: SSOLogoutRequest = SSOLogoutRequest(),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> SSOLogoutResponse:
+    """Get SSO logout URL and revoke tokens."""
+    # Revoke all refresh tokens for the user
+    await session.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == current_user.id)
+        .where(RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=datetime.utcnow())
+    )
+    await session.commit()
+    
+    # Get logout URL
+    post_logout_uri = str(request.post_logout_redirect_uri) if request.post_logout_redirect_uri else None
+    logout_url = azure_sso.get_logout_url(post_logout_redirect_uri=post_logout_uri)
+    
+    return SSOLogoutResponse(logout_url=logout_url)

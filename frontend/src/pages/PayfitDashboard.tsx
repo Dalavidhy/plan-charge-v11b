@@ -56,15 +56,27 @@ export default function PayfitDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('📊 PayfitDashboard: Loading data...');
       const [statsData, statusData] = await Promise.all([
         payfitService.getStats(),
         payfitService.getStatus(),
       ]);
       setStats(statsData);
       setSyncStatus(statusData);
-    } catch (error) {
-      toast.error('Erreur lors du chargement des données Payfit');
-      console.error('Error loading Payfit data:', error);
+      console.log('✅ PayfitDashboard: Data loaded successfully', { statsData, statusData });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || 
+                          error?.response?.data?.message || 
+                          error?.message ||
+                          'Erreur lors du chargement des données Payfit';
+      toast.error(errorMessage);
+      console.error('❌ PayfitDashboard: Error loading data:', error);
+      console.error('📋 Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
     } finally {
       setLoading(false);
     }

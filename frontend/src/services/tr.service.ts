@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+import api from '../config/api';
 
 export interface TREmployee {
   email: string;
@@ -48,8 +46,8 @@ class TRService {
    */
   async getWorkingDays(year: number, month: number): Promise<WorkingDaysData> {
     try {
-      const response = await axios.get<WorkingDaysData>(
-        `${API_BASE_URL}/tr/working-days/${year}/${month}`
+      const response = await api.get<WorkingDaysData>(
+        `/tr/working-days/${year}/${month}`
       );
       return response.data;
     } catch (error) {
@@ -63,8 +61,8 @@ class TRService {
    */
   async getTRRights(year: number, month: number): Promise<TRMonthData> {
     try {
-      const response = await axios.get<TRMonthData>(
-        `${API_BASE_URL}/tr/rights/${year}/${month}`
+      const response = await api.get<TRMonthData>(
+        `/tr/rights/${year}/${month}`
       );
       return response.data;
     } catch (error) {
@@ -78,8 +76,8 @@ class TRService {
    */
   async getEmployeeTRRights(year: number, month: number, email: string): Promise<TREmployee> {
     try {
-      const response = await axios.get<TREmployee>(
-        `${API_BASE_URL}/tr/rights/${year}/${month}/${email}`
+      const response = await api.get<TREmployee>(
+        `/tr/rights/${year}/${month}/${email}`
       );
       return response.data;
     } catch (error) {
@@ -93,8 +91,8 @@ class TRService {
    */
   async exportTRRights(year: number, month: number): Promise<Blob> {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/tr/export/${year}/${month}`,
+      const response = await api.get(
+        `/tr/export/${year}/${month}`,
         {
           responseType: 'blob',
           headers: {

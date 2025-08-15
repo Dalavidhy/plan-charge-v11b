@@ -15,7 +15,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # Check if mock mode is enabled
-USE_MOCK = os.getenv("GRYZZLY_USE_MOCK", "false").lower() == "true"
+USE_MOCK = settings.GRYZZLY_USE_MOCK
 
 if USE_MOCK:
     from app.services.gryzzly_mock import mock_service

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from "react";
+import { useAuth } from "@/context/AuthContext";
+import collaboratorsService from "@/services/collaborators.service";
 
 export type Collaborateur = {
   id: string;
@@ -54,6 +56,8 @@ type Forecasts = Record<string, Record<string, number>>; // collaborateurId -> {
 
 type AppState = {
   collaborateurs: Collaborateur[];
+  collaborateursLoading: boolean;
+  collaborateursError: string | null;
   connectors: Record<ConnectorKey, ConnectorState>;
   forecasts: Forecasts;
   sync: { runs: SyncRun[] };
@@ -72,6 +76,8 @@ type Action =
   | { type: "SET_PAYFIT_DATA"; data: PayfitData }
   | { type: "SET_GRYZZLY_DATA"; data: GryzzlyData }
   | { type: "SET_COLLABORATEURS"; collaborateurs: Collaborateur[] }
+  | { type: "SET_COLLABORATEURS_LOADING"; loading: boolean }
+  | { type: "SET_COLLABORATEURS_ERROR"; error: string | null }
   | { type: "RESET" };
 
 const STORAGE_KEY = "app:store";
@@ -81,6 +87,8 @@ const initialCollaborateurs: Collaborateur[] = [];
 
 const initialState: AppState = {
   collaborateurs: initialCollaborateurs,
+  collaborateursLoading: false,
+  collaborateursError: null,
   connectors: {
     payfit: { connected: false, logs: [] },
     gryzzly: { connected: false, logs: [] },
@@ -187,7 +195,13 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, gryzzly: action.data };
     }
     case "SET_COLLABORATEURS": {
-      return { ...state, collaborateurs: action.collaborateurs };
+      return { ...state, collaborateurs: action.collaborateurs, collaborateursLoading: false, collaborateursError: null };
+    }
+    case "SET_COLLABORATEURS_LOADING": {
+      return { ...state, collaborateursLoading: action.loading };
+    }
+    case "SET_COLLABORATEURS_ERROR": {
+      return { ...state, collaborateursError: action.error, collaborateursLoading: false };
     }
     case "RESET":
       return initialState;
@@ -202,6 +216,7 @@ const AppStoreContext = createContext<{
 } | undefined>(undefined);
 
 export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [state, dispatch] = useReducer(reducer, initialState, (init) => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -209,6 +224,30 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch {}
     return init;
   });
+
+  // Auto-load collaborators when user becomes authenticated
+  useEffect(() => {
+    const loadCollaborators = async () => {
+      // Only load if authenticated, not already loading, and no collaborators yet
+      if (!isAuthenticated || isAuthLoading || state.collaborateursLoading || state.collaborateurs.length > 0) {
+        return;
+      }
+
+      console.log("🔄 AppStore: Auto-loading collaborators");
+      dispatch({ type: "SET_COLLABORATEURS_LOADING", loading: true });
+      
+      try {
+        const collaborators = await collaboratorsService.getCollaborators();
+        console.log("✅ AppStore: Loaded", collaborators.length, "collaborators");
+        dispatch({ type: "SET_COLLABORATEURS", collaborateurs: collaborators });
+      } catch (error) {
+        console.error("❌ AppStore: Failed to load collaborators:", error);
+        dispatch({ type: "SET_COLLABORATEURS_ERROR", error: "Impossible de charger les collaborateurs" });
+      }
+    };
+
+    loadCollaborators();
+  }, [isAuthenticated, isAuthLoading, state.collaborateursLoading, state.collaborateurs.length]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

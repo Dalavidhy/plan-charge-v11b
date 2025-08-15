@@ -1,0 +1,19 @@
+{
+  "appName": "Plan de Charge SSO",
+  "tenantId": "1e1ef656-4a7f-4ea3-b5b8-2713d2e6f74d",
+  "clientId": "38109988-8ebd-4499-8904-18ca3c3704f0",
+  "objectId": "ea091f9c-448d-44bc-9607-a95f16090b69",
+  "servicePrincipalId": "68e6d512-85ae-4fe0-bb9b-3ef66d4bef82",
+  "redirectUri": "http://localhost:3200/auth/callback",
+  "configurationType": "SPA with PKCE (no secret)",
+  "permissions": [
+    "User.Read",
+    "openid",
+    "profile",
+    "email",
+    "offline_access"
+  ],
+  "adminConsentGranted": true,
+  "createdAt": "2025-08-15T15:30:00Z",
+  "notes": "Configured for SPA with PKCE flow - No client secret needed"
+}

@@ -100,8 +100,17 @@ class Settings(BaseSettings):
     PAYFIT_API_KEY: Optional[str] = None
     PAYFIT_COMPANY_ID: Optional[str] = None
     
-    GRYZZLY_API_URL: str = "https://api.gryzzly.com/v1"
+    GRYZZLY_API_URL: str = "https://api.gryzzly.io/v1"
     GRYZZLY_API_KEY: Optional[str] = None
+    GRYZZLY_USE_MOCK: bool = True
+    
+    # Azure AD Configuration
+    AZURE_AD_TENANT_ID: Optional[str] = None
+    AZURE_AD_CLIENT_ID: Optional[str] = None
+    AZURE_AD_CLIENT_SECRET: Optional[str] = None
+    AZURE_AD_REDIRECT_URI: str = "http://localhost:3200/auth/callback"
+    AZURE_AD_AUTHORITY: Optional[str] = None  # Will be computed from tenant_id if not provided
+    AZURE_AD_SCOPES: List[str] = ["User.Read"]
     
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -118,8 +127,21 @@ class Settings(BaseSettings):
     FEATURE_ADVANCED_REPORTS: bool = True
     FEATURE_INTEGRATIONS: bool = True
     FEATURE_WEBHOOKS: bool = False
-    FEATURE_SSO: bool = False
+    FEATURE_SSO: bool = True
     FEATURE_WHAT_IF_SCENARIOS: bool = False
+    
+    # SSO Configuration
+    SSO_MANDATORY: bool = True  # Force SSO authentication only
+    SSO_ALLOWED_DOMAINS: Union[str, List[str]] = ["nda-partners.com"]  # Only allow these email domains
+    
+    @field_validator("SSO_ALLOWED_DOMAINS", mode="before")
+    @classmethod
+    def assemble_sso_domains(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, list):
+            return v
+        raise ValueError(v)
     
     # Performance
     CACHE_TTL_DEFAULT: int = 300  # 5 minutes
@@ -154,6 +176,25 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+    
+    @property
+    def azure_ad_configured(self) -> bool:
+        """Check if Azure AD is properly configured."""
+        # For SPA with PKCE, client secret is not required
+        # Client secret only required for confidential client applications
+        return bool(
+            self.AZURE_AD_TENANT_ID 
+            and self.AZURE_AD_CLIENT_ID
+        )
+    
+    @property
+    def azure_ad_authority_url(self) -> str:
+        """Get Azure AD authority URL."""
+        if self.AZURE_AD_AUTHORITY:
+            return self.AZURE_AD_AUTHORITY
+        if self.AZURE_AD_TENANT_ID:
+            return f"https://login.microsoftonline.com/{self.AZURE_AD_TENANT_ID}"
+        return "https://login.microsoftonline.com/common"
     
     @property
     def database_url_sync(self) -> str:

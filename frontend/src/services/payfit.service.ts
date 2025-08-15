@@ -127,8 +127,21 @@ class PayfitService {
 
   // Connection test
   async testConnection(): Promise<{ status: string; message: string }> {
-    const response = await api.post('/payfit/sync/test-connection');
-    return response.data;
+    try {
+      console.log('🧪 PayfitService: Testing connection to Payfit API...');
+      const response = await api.post('/payfit/sync/test-connection');
+      console.log('✅ PayfitService: Connection test successful', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ PayfitService: Connection test failed', error);
+      console.error('📋 Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
+      throw error;
+    }
   }
 
   // Sync triggers

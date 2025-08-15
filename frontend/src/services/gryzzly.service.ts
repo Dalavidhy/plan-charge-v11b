@@ -134,8 +134,21 @@ class GryzzlyService {
 
   // Connection test
   async testConnection(): Promise<{ status: string; message: string }> {
-    const response = await api.post('/gryzzly/sync/test-connection');
-    return response.data;
+    try {
+      console.log('🧪 GryzzlyService: Testing connection to Gryzzly API...');
+      const response = await api.post('/gryzzly/sync/test-connection');
+      console.log('✅ GryzzlyService: Connection test successful', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ GryzzlyService: Connection test failed', error);
+      console.error('📋 Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
+      throw error;
+    }
   }
 
   // Sync triggers

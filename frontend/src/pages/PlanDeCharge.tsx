@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Holidays from "date-holidays";
 import AppLayout from "@/layouts/AppLayout";
 import { useAppStore } from "@/store/AppStore";
@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, ChevronLeft, Plus, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronLeft, Plus, Loader2, AlertCircle } from "lucide-react";
 import planChargeService, { PlanChargeData, PlanChargeCollaborator } from "@/services/plancharge.service";
-import forecastService, { ForecastProject, ForecastData, ForecastEntry } from "@/services/forecast.service";
+import forecastService, { ForecastProject, ForecastData, ForecastEntry, ForecastGroup } from "@/services/forecast.service";
 import { useToast } from "@/hooks/use-toast"
 
 function getDaysInMonth(year: number, monthIndex: number) {
@@ -54,6 +54,125 @@ export default function PlanDeCharge() {
   const days = useMemo(() => getDaysInMonth(year, monthIndex), [year, monthIndex]);
   const monthKey = `${year}-${String(monthIndex+1).padStart(2,'0')}`;
   const actifs = state.collaborateurs.filter(c => c.actif);
+  
+  // Calculate global metrics
+  const globalMetrics = useMemo(() => {
+    let totalWorkingDays = 0;
+    let totalAbsenceDays = 0;
+    let totalImputedDays = 0;
+    let totalForecastDays = 0;
+    let totalNotPlannedDays = 0;
+    let collaboratorsWithIssues = 0;
+    
+    // Daily statistics for the footer
+    const dailyStats: Record<string, { available: number; planned: number }> = {};
+    
+    actifs.forEach(c => {
+      const planChargeCollab = planChargeData?.collaborators.find(
+        pc => pc.email.toLowerCase() === c.email.toLowerCase()
+      );
+      
+      let collabWorkingDays = 0;
+      let collabAbsenceDays = 0;
+      let collabImputedDays = 0;
+      let collabForecastDays = 0;
+      let collabNotPlannedDays = 0;
+      
+      days.forEach(day => {
+        if (!day.isWeekend && !day.isHoliday) {
+          collabWorkingDays++;
+          const dk = `${year}-${String(monthIndex+1).padStart(2,'0')}-${String(day.d).padStart(2,'0')}`;
+          
+          // Initialize daily stats
+          if (!dailyStats[dk]) {
+            dailyStats[dk] = { available: 0, planned: 0 };
+          }
+          
+          // Check for absence
+          const hasAbsence = planChargeCollab?.absences?.some(absence => {
+            const absStart = new Date(absence.start_date);
+            const absEnd = new Date(absence.end_date);
+            const checkDate = new Date(dk);
+            return checkDate >= absStart && checkDate <= absEnd;
+          }) || false;
+          
+          // Check for declarations (imputations)
+          const declarations = planChargeCollab?.declarations?.[dk] || [];
+          const hasDeclarations = declarations.length > 0;
+          
+          // Check for forecasts
+          let hasForecast = false;
+          if (forecastData && planChargeCollab) {
+            const collabForecast = forecastData.collaborators.find(
+              fc => fc.collaborator_id === planChargeCollab.collaborator_id
+            );
+            if (collabForecast && collabForecast.forecasts[dk]) {
+              hasForecast = collabForecast.forecasts[dk].length > 0;
+            }
+          }
+          
+          if (hasAbsence) {
+            collabAbsenceDays++;
+            dailyStats[dk].planned++; // Absence counts as planned
+          } else {
+            dailyStats[dk].available++;
+            if (hasDeclarations) {
+              collabImputedDays++;
+              dailyStats[dk].planned++;
+            } else if (hasForecast) {
+              collabForecastDays++;
+              dailyStats[dk].planned++;
+            } else {
+              collabNotPlannedDays++;
+            }
+          }
+        }
+      });
+      
+      // Calculate TACE for this collaborator
+      const availableDays = collabWorkingDays - collabAbsenceDays;
+      const plannedDays = collabImputedDays + collabForecastDays + collabAbsenceDays;
+      const tacePercentage = availableDays > 0 
+        ? Math.round(((plannedDays - collabAbsenceDays) / availableDays) * 100)
+        : 0;
+      
+      // Check if collaborator has staffing issues
+      if (tacePercentage < 50 || collabNotPlannedDays > 3) {
+        collaboratorsWithIssues++;
+      }
+      
+      // Aggregate totals
+      totalWorkingDays += collabWorkingDays;
+      totalAbsenceDays += collabAbsenceDays;
+      totalImputedDays += collabImputedDays;
+      totalForecastDays += collabForecastDays;
+      totalNotPlannedDays += collabNotPlannedDays;
+    });
+    
+    const totalAvailableDays = totalWorkingDays - totalAbsenceDays;
+    const globalTACE = totalAvailableDays > 0 
+      ? Math.round(((totalImputedDays + totalForecastDays) / totalAvailableDays) * 100)
+      : 0;
+    
+    const imputedPercentage = totalWorkingDays > 0 
+      ? Math.round((totalImputedDays / totalWorkingDays) * 100)
+      : 0;
+    const forecastPercentage = totalWorkingDays > 0 
+      ? Math.round((totalForecastDays / totalWorkingDays) * 100)
+      : 0;
+    const notPlannedPercentage = totalWorkingDays > 0 
+      ? Math.round((totalNotPlannedDays / totalWorkingDays) * 100)
+      : 0;
+    
+    return {
+      globalTACE,
+      collaboratorsWithIssues,
+      imputedPercentage,
+      forecastPercentage,
+      notPlannedPercentage,
+      dailyStats
+    };
+  }, [actifs, planChargeData, forecastData, days, year, monthIndex]);
 
   // Gestion de l'ouverture/fermeture des lignes détaillées
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -68,7 +187,8 @@ export default function PlanDeCharge() {
   const [addProject, setAddProject] = useState<string>("");
   const [addTask, setAddTask] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<ForecastProject | null>(null);
-  const [editTarget, setEditTarget] = useState<{ forecastId: string; hours: number; description?: string } | null>(null);
+  const [editGroup, setEditGroup] = useState<ForecastGroup | null>(null);
+  const [editMode, setEditMode] = useState(false);
 
   // Fetch projects for forecast dialog
   const fetchProjects = async () => {
@@ -130,45 +250,27 @@ export default function PlanDeCharge() {
     }
   };
 
-  // Update forecast entry
-  const updateForecastEntry = async (forecastId: string, hours: number, description?: string) => {
-    try {
-      await forecastService.updateForecast(forecastId, { hours, description });
-      
-      toast({
-        title: "Succès",
-        description: "Prévisionnel mis à jour",
-      });
-      
-      // Refresh forecast data
-      await fetchForecastData();
-    } catch (error) {
-      console.error('Error updating forecast:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le prévisionnel",
-        variant: "destructive",
-      });
-    }
-  };
 
-  // Delete forecast entry
-  const deleteForecastEntry = async (forecastId: string) => {
+  // Handle forecast click - get the group and open edit dialog
+  const handleForecastClick = async (forecastId: string) => {
     try {
-      await forecastService.deleteForecast(forecastId);
+      const group = await forecastService.getForecastGroup(forecastId);
+      setEditGroup(group);
+      setEditMode(true);
+      setAddCollaboratorId(group.collaborator_id);
+      setAddProject(group.project_id);
+      setAddTask(group.task_id || "");
       
-      toast({
-        title: "Succès",
-        description: "Prévisionnel supprimé",
-      });
+      // Find and set the selected project
+      const project = projects.find(p => p.id === group.project_id);
+      setSelectedProject(project || null);
       
-      // Refresh forecast data
-      await fetchForecastData();
+      setAddOpen(true);
     } catch (error) {
-      console.error('Error deleting forecast:', error);
+      console.error('Error fetching forecast group:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer le prévisionnel",
+        description: "Impossible de récupérer les informations du prévisionnel",
         variant: "destructive",
       });
     }
@@ -211,9 +313,85 @@ export default function PlanDeCharge() {
     });
   }, [monthKey]);
 
+  // Show error message if collaborators failed to load
+  if (state.collaborateursError) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <AlertCircle className="mx-auto h-12 w-12" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Erreur de chargement</h2>
+            <p className="text-muted-foreground mb-4">{state.collaborateursError}</p>
+            <Button onClick={() => window.location.reload()}>Actualiser la page</Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+  
+  // Show loading state while collaborators are being loaded
+  if (state.collaborateursLoading || (state.collaborateurs.length === 0 && !state.collaborateursError)) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Chargement des collaborateurs...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout title="Plan de charge">
       <section className="space-y-4">
+        {/* KPI Bar */}
+        {globalMetrics && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600 mb-1">TACE Global</div>
+              <div className={`text-2xl font-bold ${
+                globalMetrics.globalTACE >= 80 ? 'text-green-600' :
+                globalMetrics.globalTACE >= 50 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {globalMetrics.globalTACE}%
+              </div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600 mb-1">Collaborateurs sans staffing suffisant</div>
+              <div className={`text-2xl font-bold ${
+                globalMetrics.collaboratorsWithIssues === 0 ? 'text-green-600' :
+                globalMetrics.collaboratorsWithIssues <= 2 ? 'text-yellow-600' : 'text-red-600'
+              }`}>
+                {globalMetrics.collaboratorsWithIssues}
+              </div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600 mb-1">Répartition des activités</div>
+              <div className="flex items-center space-x-2 text-sm">
+                <span className="text-green-600 font-semibold">{globalMetrics.imputedPercentage}%</span>
+                <span className="text-gray-400">/</span>
+                <span className="text-blue-600 font-semibold">{globalMetrics.forecastPercentage}%</span>
+                <span className="text-gray-400">/</span>
+                <span className="text-red-600 font-semibold">{globalMetrics.notPlannedPercentage}%</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Imputé / Prévisionnel / Non planifié</div>
+            </div>
+            
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="text-sm text-gray-600 mb-1">Équipe</div>
+              <div className="text-2xl font-bold text-gray-700">
+                {actifs.length} collaborateurs
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="flex flex-col gap-2">
           <div>
             <h2 className="text-xl font-semibold">Mois</h2>
@@ -266,7 +444,7 @@ export default function PlanDeCharge() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-card z-10">
               <tr>
-                <th className="px-3 py-2 text-left w-56">Collaborateur</th>
+                <th className="px-3 py-2 text-left w-80">Collaborateur</th>
                 {days.map((day) => (
                   <th key={day.d} className={`px-2 py-2 text-center font-medium ${day.isWeekend || day.isHoliday ? 'text-muted-foreground' : ''}`}>
                     <div className="flex flex-col items-center">
@@ -275,7 +453,6 @@ export default function PlanDeCharge() {
                     </div>
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right w-48">Prévisionnel (jours)</th>
               </tr>
             </thead>
             <tbody>
@@ -284,30 +461,96 @@ export default function PlanDeCharge() {
                 const planChargeCollab = planChargeData?.collaborators.find(
                   pc => pc.email.toLowerCase() === c.email.toLowerCase()
                 );
-                const forecast = state.forecasts[c.id]?.[monthKey] ?? 0;
+                
+                // Calculate TACE metrics for this collaborator
+                let workingDays = 0;
+                let daysWithAbsence = 0;
+                let daysWithActivity = 0;
+                let daysNotPlanned = 0;
+                
+                days.forEach(day => {
+                  if (!day.isWeekend && !day.isHoliday) {
+                    workingDays++;
+                    const dk = dateKey(day.d);
+                    
+                    // Check for absence
+                    const hasAbsence = planChargeCollab?.absences?.some(absence => {
+                      const absStart = new Date(absence.start_date);
+                      const absEnd = new Date(absence.end_date);
+                      const checkDate = new Date(dk);
+                      return checkDate >= absStart && checkDate <= absEnd;
+                    }) || false;
+                    
+                    // Check for declarations (imputations)
+                    const declarations = planChargeCollab?.declarations?.[dk] || [];
+                    const hasDeclarations = declarations.length > 0;
+                    
+                    // Check for forecasts
+                    let hasForecast = false;
+                    if (forecastData && planChargeCollab) {
+                      const collabForecast = forecastData.collaborators.find(
+                        fc => fc.collaborator_id === planChargeCollab.collaborator_id
+                      );
+                      if (collabForecast && collabForecast.forecasts[dk]) {
+                        hasForecast = collabForecast.forecasts[dk].length > 0;
+                      }
+                    }
+                    
+                    if (hasAbsence) {
+                      daysWithAbsence++;
+                      daysWithActivity++; // Absence counts as planned activity
+                    } else if (hasDeclarations || hasForecast) {
+                      daysWithActivity++;
+                    } else {
+                      daysNotPlanned++;
+                    }
+                  }
+                });
+                
+                // Calculate TACE percentage
+                const availableDays = workingDays - daysWithAbsence;
+                const tacePercentage = availableDays > 0 
+                  ? Math.round(((daysWithActivity - daysWithAbsence) / availableDays) * 100)
+                  : 0;
+                
+                // Determine colors
+                const taceColor = tacePercentage >= 80 ? 'bg-green-100 text-green-800' :
+                                 tacePercentage >= 50 ? 'bg-orange-100 text-orange-800' :
+                                 'bg-red-100 text-red-800';
+                const nameColor = daysNotPlanned > 3 ? 'text-red-600 font-semibold' : '';
+                
                 return (
-                  <>
+                  <React.Fragment key={c.id}>
                     <tr key={`${c.id}-main`} className="border-t">
                       <td className="px-3 py-2 font-medium">
-                        <button
-                          type="button"
-                          aria-expanded={!!expanded[c.id]}
-                          onClick={() => setExpanded((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
-                          className="inline-flex items-center justify-center rounded-md border bg-background hover:bg-accent hover:text-accent-foreground mr-2 h-6 w-6"
-                          title={expanded[c.id] ? "Réduire" : "Détails"}
-                        >
-                          {expanded[c.id] ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
+                        <div className="flex items-center">
+                          <button
+                            type="button"
+                            aria-expanded={!!expanded[c.id]}
+                            onClick={() => setExpanded((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
+                            className="inline-flex items-center justify-center rounded-md border bg-background hover:bg-accent hover:text-accent-foreground mr-2 h-6 w-6 flex-shrink-0"
+                            title={expanded[c.id] ? "Réduire" : "Détails"}
+                          >
+                            {expanded[c.id] ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                          </button>
+                          <span className={`flex-grow ${nameColor}`}>{c.nom}</span>
+                          <span className={`ml-2 inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${taceColor}`}>
+                            {tacePercentage}%
+                          </span>
+                          {daysNotPlanned > 0 && (
+                            <span className="ml-1 inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                              {daysNotPlanned}j
+                            </span>
                           )}
-                        </button>
-                        <span>{c.nom}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="ml-2"
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="ml-2 flex-shrink-0"
                           onClick={() => { 
                             // Find the matching Gryzzly collaborator ID
                             const gryzzlyCollab = planChargeData?.collaborators.find(
@@ -319,6 +562,8 @@ export default function PlanDeCharge() {
                               setAddProject("");
                               setAddTask("");
                               setSelectedProject(null);
+                              setEditMode(false);
+                              setEditGroup(null);
                               setAddOpen(true);
                             } else {
                               toast({
@@ -333,6 +578,7 @@ export default function PlanDeCharge() {
                         >
                           <Plus className="w-4 h-4" />
                         </Button>
+                        </div>
                       </td>
                       {days.map((day) => {
                         const dk = dateKey(day.d);
@@ -343,45 +589,51 @@ export default function PlanDeCharge() {
                           dk
                         );
                         
-                        // Determine what to show: 
-                        // - If weekend/holiday: nothing
-                        // - If absence: show 0 (will be shown in detail)
-                        // - If has declarations: show total hours
-                        // - Otherwise: show standard 7h
+                        // Check for forecasts
+                        let forecastHours = 0;
+                        if (forecastData && planChargeCollab) {
+                          const collabForecast = forecastData.collaborators.find(
+                            fc => fc.collaborator_id === planChargeCollab.collaborator_id
+                          );
+                          if (collabForecast && collabForecast.forecasts[dk]) {
+                            forecastHours = collabForecast.forecasts[dk].reduce((sum, f) => sum + f.hours, 0);
+                          }
+                        }
+                        
+                        // Determine what to show and color
                         let displayValue = null;
+                        let colorClass = '';
+                        
                         if (!day.isWeekend && !day.isHoliday) {
                           if (dayHours.hasAbsence) {
-                            displayValue = 0; // Absence will be shown in detail rows
+                            // Absence - show in green
+                            displayValue = 7; // Or actual absence hours if partial
+                            colorClass = 'bg-green-100 text-green-800';
                           } else if (dayHours.totalProjectHours > 0) {
+                            // Imputation - show in green
                             displayValue = dayHours.totalProjectHours;
+                            colorClass = 'bg-green-100 text-green-800';
+                          } else if (forecastHours > 0) {
+                            // Forecast - show in blue
+                            displayValue = forecastHours;
+                            colorClass = 'bg-blue-100 text-blue-800';
                           } else {
-                            displayValue = 7; // Standard working hours
+                            // Nothing planned - show 0 in red
+                            displayValue = 0;
+                            colorClass = 'bg-red-100 text-red-800';
                           }
                         }
                         
                         return (
                           <td key={`${c.id}-${day.d}`} className={`h-8 text-center ${day.isWeekend || day.isHoliday ? 'bg-muted' : ''}`}>
                             {displayValue !== null ? (
-                              <span className={`mx-auto inline-flex items-center justify-center rounded-sm px-1.5 py-0.5 text-xs tabular-nums ${
-                                dayHours.hasAbsence ? 'bg-orange-100 text-orange-800' : 
-                                dayHours.totalProjectHours > 0 ? 'bg-blue-100 text-blue-800' : 
-                                'bg-muted text-muted-foreground'
-                              }`}>
+                              <span className={`mx-auto inline-flex items-center justify-center rounded-sm px-1.5 py-0.5 text-xs tabular-nums ${colorClass}`}>
                                 {displayValue}
                               </span>
                             ) : null}
                           </td>
                         )
                       })}
-                      <td className="px-3 py-2 text-right">
-                        <input
-                          type="number"
-                          min={0}
-                          value={forecast}
-                          onChange={(e) => dispatch({ type: 'SET_FORECAST', id: c.id, monthKey, value: Number(e.target.value) })}
-                          className="w-24 border bg-background rounded-md px-2 py-1 text-right"
-                        />
-                      </td>
                     </tr>
                     {expanded[c.id] && (() => {
                       // Build detail lines: Absences + Projects (imputations + prévisionnels)
@@ -481,9 +733,9 @@ export default function PlanDeCharge() {
                                 const baseCell = `h-8 text-center ${day.isWeekend || day.isHoliday ? 'bg-muted' : ''}`;
                                 const color =
                                   !day.isWeekend && !day.isHoliday && hours > 0
-                                    ? line.kind === 'absence'
-                                      ? 'bg-muted text-foreground'
-                                      : 'bg-primary/10 text-foreground'
+                                    ? line.kind === 'forecast'
+                                      ? 'bg-blue-50 text-blue-700'  // Blue for forecasts
+                                      : 'bg-green-50 text-green-700' // Green for imputations and absences
                                     : '';
                                 const content = hours > 0 ? (
                                   <span className="mx-auto inline-flex items-center justify-center rounded-sm px-1.5 py-0.5 text-xs tabular-nums">
@@ -502,11 +754,7 @@ export default function PlanDeCharge() {
                                       className={`${baseCell} ${color} cursor-pointer`}
                                       onClick={() => {
                                         if (meta) {
-                                          setEditTarget({ 
-                                            forecastId: meta.forecastId, 
-                                            hours,
-                                            description: meta.description 
-                                          });
+                                          handleForecastClick(meta.forecastId);
                                         }
                                       }}
                                       title="Modifier le prévisionnel"
@@ -521,25 +769,66 @@ export default function PlanDeCharge() {
                                   </td>
                                 );
                               })}
-                              <td />
                             </tr>
                           ))}
                         </>
                       );
                     })()}
 
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
+            {/* Totals row */}
+            {globalMetrics && (
+              <tfoot className="border-t-2 border-gray-300 bg-gray-50">
+                <tr>
+                  <td className="px-3 py-2 font-semibold">Totaux journaliers</td>
+                  {days.map((day) => {
+                    const dk = dateKey(day.d);
+                    const stats = globalMetrics.dailyStats[dk];
+                    if (!stats || day.isWeekend || day.isHoliday) {
+                      return (
+                        <td key={`total-${day.d}`} className="h-10 text-center bg-muted">
+                          -
+                        </td>
+                      );
+                    }
+                    const coverage = stats.available > 0 
+                      ? Math.round((stats.planned / stats.available) * 100)
+                      : 0;
+                    const color = coverage >= 80 ? 'text-green-700' :
+                                coverage >= 50 ? 'text-orange-600' : 'text-red-600';
+                    return (
+                      <td key={`total-${day.d}`} className="h-10 text-center">
+                        <div className="flex flex-col items-center">
+                          <span className={`text-xs font-semibold ${color}`}>
+                            {coverage}%
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {stats.planned}/{stats.available}
+                          </span>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tfoot>
+            )}
           </table>
           )}
         </div>
         {/* Dialogs */}
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={addOpen} onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) {
+            setEditMode(false);
+            setEditGroup(null);
+          }
+        }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Ajouter un prévisionnel</DialogTitle>
+              <DialogTitle>{editMode ? "Modifier le prévisionnel" : "Ajouter un prévisionnel"}</DialogTitle>
             </DialogHeader>
             <form
               onSubmit={async (e) => {
@@ -550,6 +839,11 @@ export default function PlanDeCharge() {
                 const description = String(fd.get('description') || '');
                 
                 if (addCollaboratorId && addProject && start && end) {
+                  if (editMode && editGroup) {
+                    // Delete old group and create new one
+                    await forecastService.deleteForecastGroup(editGroup.forecast_ids);
+                  }
+                  
                   await addForecastRange(
                     addCollaboratorId, 
                     addProject, 
@@ -562,6 +856,8 @@ export default function PlanDeCharge() {
                   setAddProject("");
                   setAddTask("");
                   setSelectedProject(null);
+                  setEditMode(false);
+                  setEditGroup(null);
                 }
               }}
               className="space-y-3"
@@ -635,88 +931,66 @@ export default function PlanDeCharge() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1">
                     <Label htmlFor="start">Début</Label>
-                    <Input id="start" name="start" type="date" required />
+                    <Input 
+                      id="start" 
+                      name="start" 
+                      type="date" 
+                      required 
+                      defaultValue={editGroup?.start_date || ''}
+                    />
                   </div>
                   <div className="grid gap-1">
                     <Label htmlFor="end">Fin</Label>
-                    <Input id="end" name="end" type="date" required />
+                    <Input 
+                      id="end" 
+                      name="end" 
+                      type="date" 
+                      required 
+                      defaultValue={editGroup?.end_date || ''}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-1">
                   <Label htmlFor="description">Description (optionnel)</Label>
-                  <Input id="description" name="description" type="text" placeholder="Description du prévisionnel" />
+                  <Input 
+                    id="description" 
+                    name="description" 
+                    type="text" 
+                    placeholder="Description du prévisionnel" 
+                    defaultValue={editGroup?.description || ''}
+                  />
                 </div>
               </div>
               <DialogFooter>
+                {editMode && (
+                  <Button 
+                    type="button" 
+                    variant="destructive"
+                    onClick={async () => {
+                      if (editGroup) {
+                        await forecastService.deleteForecastGroup(editGroup.forecast_ids);
+                        await fetchForecastData();
+                        setAddOpen(false);
+                        setEditMode(false);
+                        setEditGroup(null);
+                        toast({
+                          title: "Succès",
+                          description: "Prévisionnel supprimé",
+                        });
+                      }
+                    }}
+                  >
+                    Supprimer
+                  </Button>
+                )}
                 <Button type="submit" disabled={loadingProjects || !addProject}>
-                  Ajouter
+                  {editMode ? "Modifier" : "Ajouter"}
                 </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Modifier le prévisionnel</DialogTitle>
-            </DialogHeader>
-            {editTarget ? (
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const fd = new FormData(e.currentTarget);
-                  const hours = Number(fd.get('hours') || 0);
-                  const description = String(fd.get('description') || '');
-                  if (!isNaN(hours) && hours > 0) {
-                    await updateForecastEntry(
-                      editTarget.forecastId, 
-                      hours, 
-                      description || undefined
-                    );
-                    setEditTarget(null);
-                  }
-                }}
-                className="space-y-3"
-              >
-                <div className="grid gap-1">
-                  <Label htmlFor="hours">Heures</Label>
-                  <Input
-                    id="hours"
-                    name="hours"
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    defaultValue={editTarget.hours || 7}
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="description">Description (optionnel)</Label>
-                  <Input
-                    id="description"
-                    name="description"
-                    type="text"
-                    defaultValue={editTarget.description || ''}
-                    placeholder="Description du prévisionnel"
-                  />
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={async () => {
-                      await deleteForecastEntry(editTarget.forecastId);
-                      setEditTarget(null);
-                    }}
-                  >
-                    Supprimer
-                  </Button>
-                  <Button type="submit">Enregistrer</Button>
-                </DialogFooter>
-              </form>
-            ) : null}
-          </DialogContent>
-        </Dialog>
       </section>
     </AppLayout>
   );

@@ -50,11 +50,21 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-your-secret-key-change-in-production}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       PYTHONUNBUFFERED: 1
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3200,http://localhost:3000,http://localhost:5173}
       PAYFIT_API_KEY: ${PAYFIT_API_KEY:-your-payfit-api-key}
       PAYFIT_COMPANY_ID: ${PAYFIT_COMPANY_ID:-your-company-id}
       GRYZZLY_API_KEY: ${GRYZZLY_API_KEY:-your-gryzzly-api-key}
-      GRYZZLY_API_URL: ${GRYZZLY_API_URL:-https://api.gryzzly.com}
+      GRYZZLY_API_URL: ${GRYZZLY_API_URL:-https://api.gryzzly.io/v1}
+      GRYZZLY_USE_MOCK: ${GRYZZLY_USE_MOCK:-false}
+      PAYFIT_API_URL: ${PAYFIT_API_URL:-https://partner-api.payfit.com}
+      # Azure AD Configuration
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_REDIRECT_URI: ${AZURE_AD_REDIRECT_URI:-http://localhost:3200/auth/callback}
+      FEATURE_SSO: ${FEATURE_SSO:-true}
+      SSO_MANDATORY: ${SSO_MANDATORY:-true}
+      SSO_ALLOWED_DOMAINS: ${SSO_ALLOWED_DOMAINS:-nda-partners.com}
     ports:
       - "8000:8000"
     volumes:
@@ -85,8 +95,14 @@ services:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
       VITE_APP_NAME: ${VITE_APP_NAME:-Plan Charge}
       VITE_ENV: ${VITE_ENV:-development}
+      # Gryzzly Configuration for Frontend
+      VITE_GRYZZLY_USE_MOCK: ${GRYZZLY_USE_MOCK:-false}
+      # Azure AD Configuration for Frontend
+      VITE_AZURE_AD_TENANT_ID: ${VITE_AZURE_AD_TENANT_ID}
+      VITE_AZURE_AD_CLIENT_ID: ${VITE_AZURE_AD_CLIENT_ID}
+      VITE_AZURE_AD_REDIRECT_URI: ${VITE_AZURE_AD_REDIRECT_URI:-http://localhost:3200/auth/callback}
     ports:
-      - "3000:5173"
+      - "3200:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -113,6 +129,13 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       PYTHONUNBUFFERED: 1
+      # External API Configuration
+      PAYFIT_API_KEY: ${PAYFIT_API_KEY:-your-payfit-api-key}
+      PAYFIT_COMPANY_ID: ${PAYFIT_COMPANY_ID:-your-company-id}
+      PAYFIT_API_URL: ${PAYFIT_API_URL:-https://partner-api.payfit.com}
+      GRYZZLY_API_KEY: ${GRYZZLY_API_KEY:-your-gryzzly-api-key}
+      GRYZZLY_API_URL: ${GRYZZLY_API_URL:-https://api.gryzzly.io/v1}
+      GRYZZLY_USE_MOCK: ${GRYZZLY_USE_MOCK:-false}
     volumes:
       - ./backend:/app
     depends_on:
@@ -136,6 +159,13 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       PYTHONUNBUFFERED: 1
+      # External API Configuration
+      PAYFIT_API_KEY: ${PAYFIT_API_KEY:-your-payfit-api-key}
+      PAYFIT_COMPANY_ID: ${PAYFIT_COMPANY_ID:-your-company-id}
+      PAYFIT_API_URL: ${PAYFIT_API_URL:-https://partner-api.payfit.com}
+      GRYZZLY_API_KEY: ${GRYZZLY_API_KEY:-your-gryzzly-api-key}
+      GRYZZLY_API_URL: ${GRYZZLY_API_URL:-https://api.gryzzly.io/v1}
+      GRYZZLY_USE_MOCK: ${GRYZZLY_USE_MOCK:-false}
     volumes:
       - ./backend:/app
     depends_on:

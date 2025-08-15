@@ -272,13 +272,21 @@ class GryzzlySyncService:
         """Sync time declarations from Gryzzly"""
         result = {"created": 0, "updated": 0, "failed": 0}
         
-        # Default to current month if no dates provided
+        # Default to 6 months before and 6 months after current date if no dates provided
         if not start_date:
-            start_date = date.today().replace(day=1)
+            # 6 months before current date, first day of that month
+            six_months_ago = date.today() - timedelta(days=180)
+            start_date = six_months_ago.replace(day=1)
         if not end_date:
-            # Get last day of current month
-            next_month = date.today().replace(day=28) + timedelta(days=4)
-            end_date = next_month - timedelta(days=next_month.day)
+            # 6 months after current date, last day of that month
+            six_months_later = date.today() + timedelta(days=180)
+            # Get last day of that month
+            if six_months_later.month == 12:
+                end_date = date(six_months_later.year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end_date = date(six_months_later.year, six_months_later.month + 1, 1) - timedelta(days=1)
+        
+        logger.info(f"Syncing declarations from {start_date} to {end_date} (approximately 13 months)")
         
         try:
             # Get all declarations from Gryzzly

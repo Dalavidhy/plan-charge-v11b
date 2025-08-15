@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import PayfitDashboard from "@/pages/PayfitDashboard";
 import GryzzlyDashboard from "@/pages/GryzzlyDashboard";
+import DiagnosticPanel from "@/components/DiagnosticPanel";
 
 function formatDuration(start: string, end: string) {
   const d = new Date(end).getTime() - new Date(start).getTime();
@@ -32,12 +33,20 @@ export default function Synchronisation() {
 
   return (
     <AppLayout title="Synchronisation">
-      <Tabs defaultValue="history">
+      <Tabs defaultValue="diagnostic">
         <TabsList>
+          <TabsTrigger value="diagnostic">Diagnostic</TabsTrigger>
           <TabsTrigger value="history">Historique</TabsTrigger>
           <TabsTrigger value="payfit">Payfit</TabsTrigger>
           <TabsTrigger value="gryzzly">Gryzzly</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="diagnostic">
+          <section aria-labelledby="diagnostic-heading">
+            <h2 id="diagnostic-heading" className="sr-only">Diagnostic du système</h2>
+            <DiagnosticPanel />
+          </section>
+        </TabsContent>
 
         <TabsContent value="history">
           <section aria-labelledby="history-heading">

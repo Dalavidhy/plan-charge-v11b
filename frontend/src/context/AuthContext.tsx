@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { authAPI } from "@/config/api";
 
 interface User {
@@ -13,8 +14,6 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => Promise<void>;
   userEmail?: string;
 }
@@ -22,78 +21,113 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { accounts, inProgress, instance } = useMsal();
+  const msalIsAuthenticated = useIsAuthenticated();
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
 
-  // Check if user is authenticated on mount
+
+  // Check if user is authenticated on mount and when MSAL state changes
   useEffect(() => {
     const checkAuth = async () => {
+      console.log("🔍 AuthContext checkAuth() - inProgress:", inProgress, "msalAuth:", msalIsAuthenticated, "accounts:", accounts.length);
+      
+      // If MSAL is still in progress, wait
+      if (inProgress !== "none") {
+        console.log("⏳ AuthContext: MSAL in progress, waiting...");
+        setIsLoading(true);
+        return;
+      }
+      
+      // If MSAL says not authenticated, don't check backend tokens
+      if (!msalIsAuthenticated || accounts.length === 0) {
+        console.log("🚫 AuthContext: MSAL not authenticated, clearing state");
+        setIsAuthenticated(false);
+        setUser(null);
+        setUserEmail(undefined);
+        setIsLoading(false);
+        return;
+      }
+      
+      // MSAL is authenticated, check if we have backend tokens
       const token = localStorage.getItem('access_token');
+      console.log("🔍 AuthContext: Has backend token:", !!token);
+      
       if (token) {
         try {
+          console.log("🔍 AuthContext: Calling getCurrentUser() with token");
           const userData = await authAPI.getCurrentUser();
+          console.log("✅ AuthContext: getCurrentUser() success, setting authenticated state");
           setUser(userData);
           setIsAuthenticated(true);
           setUserEmail(userData.email);
-        } catch (error) {
-          // Token invalid or expired
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+        } catch (error: any) {
+          console.error("❌ AuthContext: getCurrentUser() failed:", error);
+          // Only clear tokens for 401 (unauthorized), not for network/server errors
+          if (error.response?.status === 401) {
+            console.log("🧹 AuthContext: Token invalid (401), clearing storage");
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            setIsAuthenticated(false);
+            setUser(null);
+          } else {
+            console.log("⚠️ AuthContext: Network/server error, keeping tokens but showing as not authenticated");
+            // For network errors, don't clear tokens but still show as not authenticated
+            // This prevents constant clearing of valid tokens due to temporary network issues
+            setIsAuthenticated(false);
+            setUser(null);
+          }
         }
+      } else {
+        // No backend token but MSAL is authenticated
+        // This means we need to complete the token exchange
+        console.log("🔄 AuthContext: No backend token, but MSAL authenticated - need token exchange");
+        setIsAuthenticated(false);
+        setUser(null);
       }
       setIsLoading(false);
     };
     
     checkAuth();
-  }, []);
+  }, [msalIsAuthenticated, accounts, inProgress]);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await authAPI.login(email, password);
-      
-      // Store tokens
-      localStorage.setItem('access_token', response.access_token);
-      localStorage.setItem('refresh_token', response.refresh_token);
-      
-      // Set user data
-      setUser(response.user);
-      setIsAuthenticated(true);
-      setUserEmail(email);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.detail || 'Login failed');
-    }
-  };
-
-  const register = async (email: string, password: string, firstName: string, lastName: string) => {
-    try {
-      await authAPI.register({
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-      });
-      
-      // Auto-login after successful registration
-      await login(email, password);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.detail || 'Registration failed');
-    }
-  };
+  // Log authentication state changes
+  useEffect(() => {
+    console.log("🏁 AuthContext: Authentication state changed - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
+  }, [isAuthenticated, isLoading]);
 
   const logout = async () => {
     try {
+      // Try to call logout endpoint
       await authAPI.logout();
     } catch (error) {
       // Continue with logout even if API call fails
       console.error('Logout API call failed:', error);
     } finally {
+      // Clear everything locally
       setIsAuthenticated(false);
       setUser(null);
       setUserEmail(undefined);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      
+      // Also logout from MSAL if available
+      try {
+        if (accounts.length > 0) {
+          await instance.logoutRedirect({
+            account: accounts[0],
+            postLogoutRedirectUri: window.location.origin + '/login',
+          });
+        } else {
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('MSAL logout failed:', error);
+        window.location.href = '/login';
+      }
     }
   };
 
@@ -102,8 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated, 
       isLoading,
       user,
-      login, 
-      register,
       logout, 
       userEmail 
     }), 

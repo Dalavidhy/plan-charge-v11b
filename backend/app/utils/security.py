@@ -28,6 +28,8 @@ def create_access_token(
     additional_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Create a JWT access token."""
+    import uuid
+    
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -40,6 +42,7 @@ def create_access_token(
         "sub": str(subject),
         "type": "access",
         "iat": datetime.utcnow(),
+        "jti": str(uuid.uuid4()),  # Add unique identifier to ensure uniqueness
     }
     
     if additional_claims:
@@ -59,6 +62,8 @@ def create_refresh_token(
     additional_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
     """Create a JWT refresh token."""
+    import uuid
+    
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -71,6 +76,7 @@ def create_refresh_token(
         "sub": str(subject),
         "type": "refresh",
         "iat": datetime.utcnow(),
+        "jti": str(uuid.uuid4()),  # Add unique identifier to ensure uniqueness
     }
     
     if additional_claims:

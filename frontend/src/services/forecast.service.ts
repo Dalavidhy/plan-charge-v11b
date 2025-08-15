@@ -77,6 +77,20 @@ export interface UpdateForecastParams {
   description?: string;
 }
 
+export interface ForecastGroup {
+  forecast_ids: string[];
+  collaborator_id: string;
+  project_id: string;
+  project_name?: string;
+  task_id?: string;
+  task_name?: string;
+  start_date: string;
+  end_date: string;
+  hours_per_day: number;
+  description?: string;
+  total_days: number;
+}
+
 class ForecastService {
   /**
    * Get active projects with their tasks for forecast selection
@@ -188,6 +202,34 @@ class ForecastService {
     });
     
     return total;
+  }
+
+  /**
+   * Get the group of forecasts that were created together
+   */
+  async getForecastGroup(forecastId: string): Promise<ForecastGroup> {
+    try {
+      const response = await api.get(`/collaborators/forecast/${forecastId}/group`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching forecast group:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a group of forecast entries
+   */
+  async deleteForecastGroup(forecastIds: string[]): Promise<{ message: string; deleted_count: number }> {
+    try {
+      const response = await api.delete('/collaborators/forecast/group', {
+        data: { forecast_ids: forecastIds }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting forecast group:', error);
+      throw error;
+    }
   }
 }
 

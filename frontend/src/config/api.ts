@@ -3,6 +3,11 @@ import axios from 'axios';
 // API Base URL - use environment variable or default to local backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+// Debug logging for API configuration
+console.log('=== API CONFIG DEBUG ===');
+console.log('import.meta.env.VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('Computed API_BASE_URL:', API_BASE_URL);
+
 // Create axios instance with default config
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -14,6 +19,10 @@ export const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
+    // Debug: Log the final URL being called
+    const finalURL = config.baseURL + config.url;
+    console.log('🌐 API Request:', config.method?.toUpperCase(), finalURL);
+    
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
