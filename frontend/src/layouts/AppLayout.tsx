@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import NDALogo from "@/assets/NDA_LOGO_BASELINE_RVB.svg";
 
 export default function AppLayout({ children, title }: { children: React.ReactNode; title?: string }) {
   const { logout, userEmail } = useAuth();
@@ -15,7 +16,7 @@ export default function AppLayout({ children, title }: { children: React.ReactNo
           <header className="h-14 flex items-center border-b bg-background/70 backdrop-blur-sm">
             <div className="flex items-center gap-3 px-4 w-full">
               <SidebarTrigger />
-              <div className="flex-1">
+              <div className="flex-1 flex items-center gap-3">
                 <h1 className="text-lg font-semibold">{title ?? "Plateforme RH"}</h1>
               </div>
               <div className="flex items-center gap-3">

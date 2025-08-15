@@ -9,7 +9,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
+import NDALogo from "@/assets/NDA_LOGO_BASELINE_RVB.svg";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -41,6 +43,20 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        <SidebarSeparator />
+        
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="flex justify-center p-4">
+              <img 
+                src={NDALogo} 
+                alt="NDA Partners" 
+                className="h-72 w-auto opacity-100"
+              />
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

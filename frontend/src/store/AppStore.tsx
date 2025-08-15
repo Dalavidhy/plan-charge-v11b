@@ -68,6 +68,7 @@ type AppState = {
 type Action =
   | { type: "TOGGLE_ELIGIBLE"; id: string }
   | { type: "TOGGLE_ACTIF"; id: string }
+  | { type: "UPDATE_MATRICULE"; id: string; matricule: string }
   | { type: "SET_DROIT"; id: string; value?: number }
   | { type: "SET_FORECAST"; id: string; monthKey: string; value: number }
   | { type: "SET_CONNECTOR"; key: ConnectorKey; connected: boolean }
@@ -140,6 +141,11 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         collaborateurs: state.collaborateurs.map(c => c.id === action.id ? { ...c, actif: !c.actif } : c)
+      };
+    case "UPDATE_MATRICULE":
+      return {
+        ...state,
+        collaborateurs: state.collaborateurs.map(c => c.id === action.id ? { ...c, matricule: action.matricule } : c)
       };
     case "SET_DROIT":
       return {

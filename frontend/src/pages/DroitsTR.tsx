@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown, Loader2, AlertCircle } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -177,8 +177,8 @@ export default function DroitsTR() {
               </thead>
               <tbody>
                 {data.employees.map((employee: TREmployee) => (
-                  <>
-                    <tr key={employee.email} className="border-t hover:bg-accent/50">
+                  <React.Fragment key={employee.email}>
+                    <tr className="border-t hover:bg-accent/50">
                       <td className="px-3 py-2">{employee.matricule}</td>
                       <td className="px-3 py-2 font-medium">
                         <button
@@ -246,7 +246,7 @@ export default function DroitsTR() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

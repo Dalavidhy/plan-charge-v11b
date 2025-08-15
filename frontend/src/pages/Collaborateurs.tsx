@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { useAppStore } from "@/store/AppStore";
 import { setSEO } from "@/lib/seo";
 import collaboratorsService from "@/services/collaborators.service";
-import { Loader2, AlertCircle, Download, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, Download, RefreshCw, Edit, Check, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Collaborateurs() {
@@ -12,6 +12,8 @@ export default function Collaborateurs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [editingMatricule, setEditingMatricule] = useState<string | null>(null);
+  const [matriculeValues, setMatriculeValues] = useState<Record<string, string>>({});
   const [showOnlyActive, setShowOnlyActive] = useState(() => {
     return localStorage.getItem('collaborateurs.showOnlyActive') === 'true';
   });
@@ -85,6 +87,58 @@ export default function Collaborateurs() {
       });
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const startEditingMatricule = (id: string, currentMatricule: string) => {
+    setEditingMatricule(id);
+    setMatriculeValues({ ...matriculeValues, [id]: currentMatricule || '' });
+  };
+
+  const cancelEditingMatricule = (id: string) => {
+    setEditingMatricule(null);
+    const newValues = { ...matriculeValues };
+    delete newValues[id];
+    setMatriculeValues(newValues);
+  };
+
+  const saveMatricule = async (id: string) => {
+    const newMatricule = matriculeValues[id]?.trim() || '';
+    
+    try {
+      setUpdating(id);
+      await collaboratorsService.updateCollaborator(id, { matricule: newMatricule });
+      
+      // Update local state
+      dispatch({ type: 'UPDATE_MATRICULE', id, matricule: newMatricule });
+      
+      // Clean up editing state
+      setEditingMatricule(null);
+      const newValues = { ...matriculeValues };
+      delete newValues[id];
+      setMatriculeValues(newValues);
+      
+      toast({
+        title: "Succès",
+        description: "Matricule mis à jour",
+      });
+    } catch (err) {
+      console.error("Error updating matricule:", err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le matricule",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleMatriculeKeyPress = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter') {
+      saveMatricule(id);
+    } else if (e.key === 'Escape') {
+      cancelEditingMatricule(id);
     }
   };
 
@@ -184,7 +238,48 @@ export default function Collaborateurs() {
                 displayedCollaborateurs.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
                     <td className="px-3 py-2 text-muted-foreground">
-                      {c.matricule || '-'}
+                      {editingMatricule === c.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={matriculeValues[c.id] || ''}
+                            onChange={(e) => setMatriculeValues({ ...matriculeValues, [c.id]: e.target.value })}
+                            onKeyDown={(e) => handleMatriculeKeyPress(e, c.id)}
+                            className="w-20 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Matricule"
+                            autoFocus
+                            disabled={updating === c.id}
+                          />
+                          <button
+                            onClick={() => saveMatricule(c.id)}
+                            disabled={updating === c.id}
+                            className="p-0.5 text-green-600 hover:text-green-700 disabled:opacity-50"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={() => cancelEditingMatricule(c.id)}
+                            disabled={updating === c.id}
+                            className="p-0.5 text-red-600 hover:text-red-700 disabled:opacity-50"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 group">
+                          <span className="min-w-0 flex-1">
+                            {c.matricule || '-'}
+                          </span>
+                          <button
+                            onClick={() => startEditingMatricule(c.id, c.matricule || '')}
+                            disabled={updating === c.id}
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-opacity"
+                            title="Modifier le matricule"
+                          >
+                            <Edit size={12} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2 font-medium">{c.nom}</td>
                     <td className="px-3 py-2 text-sm text-muted-foreground">
