@@ -186,49 +186,79 @@ class TRService:
     async def calculate_all_tr_rights(self, year: int, month: int) -> Dict[str, Any]:
         """
         Calculate TR rights for all employees eligible for TR
-        Uses the unified collaborators endpoint to respect manual eligibility changes
+        Determines eligibility based on active Payfit contracts and manual overrides
         """
-        # Import necessary modules
-        from app.api.v1.endpoints.collaborators import get_collaborators
-        from app.dependencies import get_async_session
+        # Import necessary models
+        from app.models.tr_eligibility import TREligibilityOverride
+        from app.models.payfit import PayfitContract
+        from sqlalchemy.orm import selectinload
         
-        # Get all collaborators with their eligibility status from the unified endpoint
-        # This respects the manual eligibility changes made in the UI
-        try:
-            # We pass active_only=False to get all collaborators, then filter ourselves
-            collaborators_list = await get_collaborators(
-                active_only=False,
-                session=self.session,
-                current_user=None  # Internal call, no user auth needed
+        # Get all active Gryzzly collaborators with matricule
+        collaborators_query = select(GryzzlyCollaborator).where(
+            and_(
+                GryzzlyCollaborator.matricule.isnot(None),
+                GryzzlyCollaborator.is_active == True
             )
-        except Exception as e:
-            # Fallback to old method if there's an issue
-            collaborators_query = select(GryzzlyCollaborator).where(
-                and_(
-                    GryzzlyCollaborator.matricule.isnot(None),
-                    GryzzlyCollaborator.is_active == True
-                )
-            )
-            collaborators_result = await self.session.execute(collaborators_query)
-            gryzzly_collabs = collaborators_result.scalars().all()
+        )
+        collaborators_result = await self.session.execute(collaborators_query)
+        gryzzly_collabs = collaborators_result.scalars().all()
+        
+        # Get all Payfit employees with their contracts
+        payfit_query = select(PayfitEmployee).options(selectinload(PayfitEmployee.contracts))
+        payfit_result = await self.session.execute(payfit_query)
+        payfit_employees = payfit_result.scalars().all()
+        
+        # Create a map of Payfit employees by email
+        payfit_map = {}
+        for emp in payfit_employees:
+            if emp.email:
+                email_lower = emp.email.lower()
+                # Keep the most recently created employee record if duplicates
+                if email_lower not in payfit_map:
+                    payfit_map[email_lower] = emp
+                elif emp.created_at and payfit_map[email_lower].created_at:
+                    if emp.created_at > payfit_map[email_lower].created_at:
+                        payfit_map[email_lower] = emp
+        
+        # Get all TR eligibility overrides
+        overrides_result = await self.session.execute(select(TREligibilityOverride))
+        overrides = overrides_result.scalars().all()
+        overrides_by_email = {override.email.lower(): override for override in overrides}
+        
+        # Build list of eligible collaborators
+        eligible_collaborators = []
+        for collab in gryzzly_collabs:
+            if not collab.email:
+                continue
             
-            # Convert to dict format for compatibility
-            collaborators_list = [
-                {
-                    'email': c.email,
-                    'matricule': c.matricule,
-                    'actif': c.is_active,
-                    'eligibleTR': True,  # Default to true for backward compatibility
-                    'nom': f"{c.first_name or ''} {c.last_name or ''}".strip()
-                }
-                for c in gryzzly_collabs
-            ]
+            email_lower = collab.email.lower()
+            
+            # Check for manual override first
+            override = overrides_by_email.get(email_lower)
+            if override:
+                eligible_tr = override.is_eligible
+            else:
+                # Check if there's an active Payfit contract
+                eligible_tr = False
+                payfit_emp = payfit_map.get(email_lower)
+                if payfit_emp and payfit_emp.contracts:
+                    # Check if there's at least one active contract
+                    active_contracts = [c for c in payfit_emp.contracts if c.is_active]
+                    eligible_tr = len(active_contracts) > 0
+                else:
+                    # If no Payfit data, default to eligible for active Gryzzly collaborators
+                    eligible_tr = True
+            
+            if eligible_tr:
+                eligible_collaborators.append({
+                    'email': collab.email,
+                    'matricule': collab.matricule,
+                    'actif': collab.is_active,
+                    'eligibleTR': eligible_tr,
+                    'nom': f"{collab.first_name or ''} {collab.last_name or ''}".strip()
+                })
         
-        # Filter only those who are active, eligible for TR, and have a matricule
-        eligible_collaborators = [
-            c for c in collaborators_list 
-            if c.get('actif') and c.get('eligibleTR') and c.get('matricule')
-        ]
+        logger.info(f"Found {len(eligible_collaborators)} eligible collaborators for TR rights calculation")
         
         # Get working days for the month
         working_days_info = self.get_working_days(year, month)
