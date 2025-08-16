@@ -147,4 +147,3 @@ class PayfitSyncLog(BaseModel):
     # Metadata
     triggered_by = Column(String(255), nullable=True)  # username or 'system'
     sync_metadata = Column(JSON, default={})
-    created_at = Column(DateTime, default=datetime.utcnow)
