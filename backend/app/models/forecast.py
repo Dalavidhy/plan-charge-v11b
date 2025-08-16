@@ -41,9 +41,8 @@ class Forecast(BaseModel):
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     modified_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     
-    # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Timestamps are inherited from BaseModel (TimestampMixin)
+    # Do not redefine created_at and updated_at here
     
     # Relationships
     collaborator = relationship("GryzzlyCollaborator", foreign_keys=[collaborator_id])
