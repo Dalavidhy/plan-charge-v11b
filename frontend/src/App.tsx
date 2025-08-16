@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppStoreProvider } from "@/store/AppStore";
 import { MsalProviderWrapper } from "@/components/MsalProvider";
+import SSOConfigCheck from "@/components/SSOConfigCheck";
 import Auth from "@/pages/Auth";
 import PlanDeCharge from "@/pages/PlanDeCharge";
 import DroitsTR from "@/pages/DroitsTR";
@@ -40,29 +41,31 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <MsalProviderWrapper>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <AppStoreProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Auth />} />
-                <Route path="/auth/callback" element={<Auth />} />
-                <Route path="/" element={<Navigate to="/plan" replace />} />
-                <Route path="/plan" element={<ProtectedRoute><PlanDeCharge /></ProtectedRoute>} />
-                <Route path="/droits-tr" element={<ProtectedRoute><DroitsTR /></ProtectedRoute>} />
-                <Route path="/sync" element={<ProtectedRoute><Synchronisation /></ProtectedRoute>} />
-                <Route path="/collaborateurs" element={<ProtectedRoute><Collaborateurs /></ProtectedRoute>} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </AppStoreProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </MsalProviderWrapper>
+    <SSOConfigCheck>
+      <MsalProviderWrapper>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AuthProvider>
+            <AppStoreProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Auth />} />
+                  <Route path="/auth/callback" element={<Auth />} />
+                  <Route path="/" element={<Navigate to="/plan" replace />} />
+                  <Route path="/plan" element={<ProtectedRoute><PlanDeCharge /></ProtectedRoute>} />
+                  <Route path="/droits-tr" element={<ProtectedRoute><DroitsTR /></ProtectedRoute>} />
+                  <Route path="/sync" element={<ProtectedRoute><Synchronisation /></ProtectedRoute>} />
+                  <Route path="/collaborateurs" element={<ProtectedRoute><Collaborateurs /></ProtectedRoute>} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </AppStoreProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </MsalProviderWrapper>
+    </SSOConfigCheck>
   </QueryClientProvider>
 );
 

@@ -34,7 +34,9 @@ target_metadata = Base.metadata
 # ... etc.
 
 # Override sqlalchemy.url with environment variable
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# Escape % characters to prevent ConfigParser interpolation issues
+database_url = settings.database_url_sync.replace('%', '%%')
+config.set_main_option("sqlalchemy.url", database_url)
 
 
 def run_migrations_offline() -> None:

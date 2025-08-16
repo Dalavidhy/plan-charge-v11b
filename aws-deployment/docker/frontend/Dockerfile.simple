@@ -1,0 +1,27 @@
+# Dockerfile simple pour Frontend (build local)
+FROM nginx:1.25-alpine
+
+# Installer curl pour health check
+RUN apk add --no-cache curl
+
+# Copier la configuration Nginx optimisée
+COPY aws-deployment/docker/frontend/nginx.conf /etc/nginx/nginx.conf
+COPY aws-deployment/docker/frontend/default.conf /etc/nginx/conf.d/default.conf
+
+# Copier les fichiers buildés depuis le dossier dist local
+COPY frontend/dist /usr/share/nginx/html
+
+# Ajouter un script de démarrage
+RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
+    echo 'echo "🚀 Starting Plan Charge Frontend..."' >> /docker-entrypoint.sh && \
+    echo 'echo "📡 Serving from Nginx on port 80"' >> /docker-entrypoint.sh && \
+    echo 'nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+EXPOSE 80
+
+CMD ["/docker-entrypoint.sh"]

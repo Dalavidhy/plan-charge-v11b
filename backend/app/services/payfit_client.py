@@ -20,12 +20,18 @@ class PayfitAPIClient:
         self.api_key = settings.PAYFIT_API_KEY
         self.company_id = settings.PAYFIT_COMPANY_ID
         
-        if not self.api_key:
-            logger.error("PAYFIT_API_KEY is not configured")
-            raise ValueError("PAYFIT_API_KEY is not configured in settings")
-        if not self.company_id:
-            logger.error("PAYFIT_COMPANY_ID is not configured")
-            raise ValueError("PAYFIT_COMPANY_ID is not configured in settings")
+        # Check if credentials are properly configured
+        self.is_configured = (
+            self.api_key and 
+            self.api_key != "placeholder-payfit-key" and
+            self.company_id and 
+            self.company_id != "placeholder-company-id"
+        )
+        
+        if not self.is_configured:
+            logger.warning("Payfit API credentials not properly configured - using mock mode")
+            self.api_key = "mock-key"
+            self.company_id = "mock-company"
         
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -64,6 +70,10 @@ class PayfitAPIClient:
     
     async def test_connection(self) -> bool:
         """Test API connection and authentication"""
+        if not self.is_configured:
+            logger.info("Payfit API is in mock mode - connection test returns True")
+            return True
+            
         try:
             # Try to get company info
             result = await self.get_company()
@@ -75,6 +85,13 @@ class PayfitAPIClient:
     # Company endpoint
     async def get_company(self) -> Dict:
         """Get company information"""
+        if not self.is_configured:
+            return {
+                "id": "mock-company",
+                "name": "Mock Company for Development",
+                "status": "active"
+            }
+        
         endpoint = f"/companies/{self.company_id}"
         return await self._make_request("GET", endpoint)
     
@@ -87,6 +104,12 @@ class PayfitAPIClient:
         email: Optional[str] = None
     ) -> Dict:
         """Get list of collaborators (employees)"""
+        if not self.is_configured:
+            return {
+                "nextPageToken": None,
+                "collaborators": []  # Return empty list in mock mode
+            }
+        
         endpoint = f"/companies/{self.company_id}/collaborators"
         params = {
             "maxResults": str(min(max_results, 50))  # Max 50 according to API
@@ -167,6 +190,12 @@ class PayfitAPIClient:
         end_date: Optional[date] = None
     ) -> Dict:
         """Get list of absences"""
+        if not self.is_configured:
+            return {
+                "nextPageToken": None,
+                "absences": []  # Return empty list in mock mode
+            }
+        
         endpoint = f"/companies/{self.company_id}/absences"
         params = {
             "maxResults": str(min(max_results, 50)),

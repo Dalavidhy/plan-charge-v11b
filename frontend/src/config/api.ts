@@ -1,12 +1,14 @@
 import axios from 'axios';
+import { runtimeConfig } from './runtimeConfig';
 
-// API Base URL - use environment variable or default to local backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// API Base URL - use runtime config (supports both build-time and runtime injection)
+const API_BASE_URL = runtimeConfig.apiUrl;
 
 // Debug logging for API configuration
 console.log('=== API CONFIG DEBUG ===');
-console.log('import.meta.env.VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('Runtime config API URL:', runtimeConfig.apiUrl);
 console.log('Computed API_BASE_URL:', API_BASE_URL);
+console.log('Runtime config debug:', runtimeConfig.debugInfo);
 
 // Create axios instance with default config
 export const api = axios.create({

@@ -3,11 +3,12 @@
  */
 
 import { Configuration, LogLevel } from "@azure/msal-browser";
+import { runtimeConfig } from "./runtimeConfig";
 
-// Get configuration from environment variables or use defaults
-const AZURE_AD_CLIENT_ID = import.meta.env.VITE_AZURE_AD_CLIENT_ID || "";
-const AZURE_AD_TENANT_ID = import.meta.env.VITE_AZURE_AD_TENANT_ID || "";
-const AZURE_AD_REDIRECT_URI = import.meta.env.VITE_AZURE_AD_REDIRECT_URI || window.location.origin + "/auth/callback";
+// Get configuration from runtime config (supports both build-time and runtime injection)
+const AZURE_AD_CLIENT_ID = runtimeConfig.azureClientId;
+const AZURE_AD_TENANT_ID = runtimeConfig.azureTenantId;
+const AZURE_AD_REDIRECT_URI = runtimeConfig.azureRedirectUri;
 
 
 /**

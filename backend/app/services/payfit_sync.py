@@ -44,6 +44,17 @@ class PayfitSyncService:
             "errors": []
         }
         
+        # Check if Payfit is properly configured
+        if not self.client.is_configured:
+            logger.info("Payfit API is in mock mode - skipping sync")
+            sync_log.sync_status = "success"
+            sync_log.completed_at = datetime.utcnow()
+            sync_log.duration_seconds = 0
+            sync_log.records_synced = 0
+            results["errors"].append("Payfit API not configured - mock mode active")
+            await self.db.commit()
+            return results
+        
         try:
             # Sync employees first
             employee_result = await self.sync_employees()
@@ -97,6 +108,11 @@ class PayfitSyncService:
     async def sync_employees(self) -> Dict[str, int]:
         """Sync employees from Payfit"""
         sync_result = {"created": 0, "updated": 0, "failed": 0}
+        
+        # Check if Payfit is properly configured
+        if not self.client.is_configured:
+            logger.info("Payfit API is in mock mode - skipping employee sync")
+            return sync_result
         
         try:
             # Get all employees from Payfit

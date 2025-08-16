@@ -185,13 +185,13 @@ class AzureSSO:
         
         # Create new user
         # Get or create default organization
-        org_query = select(Organization).where(Organization.name == "Default Organization")
+        org_query = select(Organization).where(Organization.name == "NDA Partners")
         org_result = await session.execute(org_query)
         organization = org_result.scalar_one_or_none()
         
         if not organization:
             organization = Organization(
-                name="Default Organization",
+                name="NDA Partners",
                 timezone="Europe/Paris",
             )
             session.add(organization)
