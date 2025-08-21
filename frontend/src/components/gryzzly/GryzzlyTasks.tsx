@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Search, ListTodo, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import gryzzlyService, { GryzzlyTask, GryzzlyProject } from '@/services/gryzzly.service';
+import { logger } from '@/utils/logger';
 
 export default function GryzzlyTasks() {
   const [tasks, setTasks] = useState<GryzzlyTask[]>([]);
@@ -62,7 +63,7 @@ export default function GryzzlyTasks() {
       setTasks(tasksData);
     } catch (error) {
       toast.error('Erreur lors du chargement des tâches');
-      console.error('Error loading tasks:', error);
+      logger.error('Error loading tasks:', error);
     } finally {
       setLoading(false);
     }

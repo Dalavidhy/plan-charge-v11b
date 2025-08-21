@@ -38,6 +38,7 @@ import GryzzlyProjects from '@/components/gryzzly/GryzzlyProjects';
 import GryzzlyTasks from '@/components/gryzzly/GryzzlyTasks';
 import GryzzlyDeclarations from '@/components/gryzzly/GryzzlyDeclarations';
 import GryzzlySyncLogs from '@/components/gryzzly/GryzzlySyncLogs';
+import { logger } from '@/utils/logger';
 
 export default function GryzzlyDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -55,22 +56,22 @@ export default function GryzzlyDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('📊 GryzzlyDashboard: Loading data...');
+      logger.debug('📊 GryzzlyDashboard: Loading data...');
       const [statsData, statusData] = await Promise.all([
         gryzzlyService.getStats(),
         gryzzlyService.getStatus(),
       ]);
       setStats(statsData);
       setSyncStatus(statusData);
-      console.log('✅ GryzzlyDashboard: Data loaded successfully', { statsData, statusData });
+      logger.debug('✅ GryzzlyDashboard: Data loaded successfully', { statsData, statusData });
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || 
                           error?.response?.data?.message || 
                           error?.message ||
                           'Erreur lors du chargement des données Gryzzly';
       toast.error(errorMessage);
-      console.error('❌ GryzzlyDashboard: Error loading data:', error);
-      console.error('📋 Error details:', {
+      logger.error('❌ GryzzlyDashboard: Error loading data:', error);
+      logger.error('📋 Error details:', {
         status: error?.response?.status,
         statusText: error?.response?.statusText,
         data: error?.response?.data,
@@ -90,7 +91,7 @@ export default function GryzzlyDashboard() {
       await loadData();
     } catch (error) {
       toast.error('Impossible de se connecter à l\'API Gryzzly');
-      console.error('Connection test failed:', error);
+      logger.error('Connection test failed:', error);
     }
   };
 
@@ -125,7 +126,7 @@ export default function GryzzlyDashboard() {
       }, 3000);
     } catch (error) {
       toast.error(`Erreur lors de la synchronisation ${type}`);
-      console.error(`Sync ${type} failed:`, error);
+      logger.error(`Sync ${type} failed:`, error);
     } finally {
       setSyncing(false);
     }

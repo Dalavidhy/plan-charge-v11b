@@ -12,6 +12,7 @@ import { ChevronDown, ChevronRight, ChevronLeft, Plus, Loader2, AlertCircle } fr
 import planChargeService, { PlanChargeData, PlanChargeCollaborator } from "@/services/plancharge.service";
 import forecastService, { ForecastProject, ForecastData, ForecastEntry, ForecastGroup } from "@/services/forecast.service";
 import { useToast } from "@/hooks/use-toast"
+import { logger } from '@/utils/logger';
 
 function getDaysInMonth(year: number, monthIndex: number) {
   const date = new Date(year, monthIndex, 1);
@@ -198,7 +199,7 @@ export default function PlanDeCharge() {
       const projectsData = await forecastService.getProjectsWithTasks(false);
       setProjects(projectsData);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      logger.error('Error fetching projects:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger les projets",
@@ -215,7 +216,7 @@ export default function PlanDeCharge() {
       const data = await forecastService.getForecasts(year, monthIndex + 1);
       setForecastData(data);
     } catch (error) {
-      console.error('Error fetching forecast data:', error);
+      logger.error('Error fetching forecast data:', error);
       // Silent fail - forecasts are optional
     }
   };
@@ -241,7 +242,7 @@ export default function PlanDeCharge() {
       // Refresh forecast data
       await fetchForecastData();
     } catch (error) {
-      console.error('Error creating forecast:', error);
+      logger.error('Error creating forecast:', error);
       toast({
         title: "Erreur",
         description: "Impossible de créer le prévisionnel",
@@ -267,7 +268,7 @@ export default function PlanDeCharge() {
       
       setAddOpen(true);
     } catch (error) {
-      console.error('Error fetching forecast group:', error);
+      logger.error('Error fetching forecast group:', error);
       toast({
         title: "Erreur",
         description: "Impossible de récupérer les informations du prévisionnel",
@@ -283,7 +284,7 @@ export default function PlanDeCharge() {
       const data = await planChargeService.getPlanCharge(year, monthIndex + 1);
       setPlanChargeData(data);
     } catch (error) {
-      console.error('Error fetching plan de charge:', error);
+      logger.error('Error fetching plan de charge:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger les données du plan de charge",

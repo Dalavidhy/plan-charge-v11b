@@ -1,4 +1,5 @@
 import api from '../config/api';
+import { logger } from '@/utils/logger';
 
 export interface TREmployee {
   email: string;
@@ -51,7 +52,7 @@ class TRService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching working days:', error);
+      logger.error('Error fetching working days:', error);
       throw error;
     }
   }
@@ -66,7 +67,7 @@ class TRService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching TR rights:', error);
+      logger.error('Error fetching TR rights:', error);
       throw error;
     }
   }
@@ -81,7 +82,7 @@ class TRService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error fetching employee TR rights:', error);
+      logger.error('Error fetching employee TR rights:', error);
       throw error;
     }
   }
@@ -102,7 +103,7 @@ class TRService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error exporting TR rights:', error);
+      logger.error('Error exporting TR rights:', error);
       throw error;
     }
   }
@@ -122,7 +123,7 @@ class TRService {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading TR rights:', error);
+      logger.error('Error downloading TR rights:', error);
       throw error;
     }
   }

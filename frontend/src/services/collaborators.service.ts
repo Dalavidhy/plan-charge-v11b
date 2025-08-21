@@ -2,6 +2,7 @@
  * Collaborators service for unified employee management
  */
 import api from '../config/api';
+import { logger } from '@/utils/logger';
 
 export interface Collaborator {
   id: string;
@@ -48,7 +49,7 @@ class CollaboratorsService {
       const response = await api.get(`/collaborators?${params.toString()}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching collaborators:', error);
+      logger.error('Error fetching collaborators:', error);
       throw error;
     }
   }
@@ -64,7 +65,7 @@ class CollaboratorsService {
       const response = await api.patch(`/collaborators/${id}`, updates);
       return response.data;
     } catch (error) {
-      console.error('Error updating collaborator:', error);
+      logger.error('Error updating collaborator:', error);
       throw error;
     }
   }
@@ -77,7 +78,7 @@ class CollaboratorsService {
       const response = await this.updateCollaborator(id, { actif: !currentStatus });
       return response;
     } catch (error) {
-      console.error('Error toggling active status:', error);
+      logger.error('Error toggling active status:', error);
       throw error;
     }
   }
@@ -90,7 +91,7 @@ class CollaboratorsService {
       const response = await this.updateCollaborator(id, { eligibleTR: !currentStatus });
       return response;
     } catch (error) {
-      console.error('Error toggling TR eligibility:', error);
+      logger.error('Error toggling TR eligibility:', error);
       throw error;
     }
   }
@@ -103,7 +104,7 @@ class CollaboratorsService {
       const response = await api.get('/collaborators/stats');
       return response.data;
     } catch (error) {
-      console.error('Error fetching collaborator stats:', error);
+      logger.error('Error fetching collaborator stats:', error);
       throw error;
     }
   }

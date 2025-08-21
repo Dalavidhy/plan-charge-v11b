@@ -148,3 +148,30 @@ logs/
 # Backup files
 *.bak
 *.backup
+
+# CI/CD
+.github/secrets/
+
+# AWS
+.aws/
+
+# Temporary deployment files
+/tmp/
+task-definition-*.json
+reinject_matricules_*.sql
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Node modules - force exclude
+**/node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Deployment artifacts
+backend/Dockerfile.*
+frontend/build/

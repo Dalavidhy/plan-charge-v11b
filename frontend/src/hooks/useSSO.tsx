@@ -8,6 +8,7 @@ import { InteractionStatus, AuthenticationResult, AccountInfo } from "@azure/msa
 import { loginRequest, silentRequest } from "@/config/msalConfig";
 import axios from "axios";
 import { toast } from "sonner";
+import { logger } from '@/utils/logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -45,7 +46,7 @@ export const useSSO = (): UseSSO => {
       const response = await axios.get(`${API_BASE_URL}/api/v1/auth/sso/status`);
       setSSOStatus(response.data);
     } catch (error) {
-      console.error("Failed to check SSO status:", error);
+      logger.error("Failed to check SSO status:", error);
       setSSOStatus({
         enabled: false,
         configured: false,
@@ -75,7 +76,7 @@ export const useSSO = (): UseSSO => {
           }
         }
       } catch (error) {
-        console.error("SSO login failed:", error);
+        logger.error("SSO login failed:", error);
         toast.error("Erreur lors de la connexion SSO");
       } finally {
         setIsLoading(false);
@@ -99,7 +100,7 @@ export const useSSO = (): UseSSO => {
         return response.data;
       }
     } catch (error) {
-      console.error("Failed to exchange code for token:", error);
+      logger.error("Failed to exchange code for token:", error);
       toast.error("Erreur lors de l'échange du code");
       throw error;
     }
@@ -134,7 +135,7 @@ export const useSSO = (): UseSSO => {
       
       toast.success("Déconnexion réussie");
     } catch (error) {
-      console.error("SSO logout failed:", error);
+      logger.error("SSO logout failed:", error);
       // Still clear tokens even if logout fails
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
@@ -157,7 +158,7 @@ export const useSSO = (): UseSSO => {
           };
           await instance.acquireTokenSilent(silentRequestWithAccount);
         } catch (error) {
-          console.error("Silent token acquisition failed:", error);
+          logger.error("Silent token acquisition failed:", error);
         }
       }
     };

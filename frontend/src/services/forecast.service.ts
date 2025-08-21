@@ -2,6 +2,7 @@
  * Forecast service for plan de charge predictions
  */
 import api from '../config/api';
+import { logger } from '@/utils/logger';
 
 export interface ForecastProject {
   id: string;
@@ -102,7 +103,7 @@ class ForecastService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching projects with tasks:', error);
+      logger.error('Error fetching projects with tasks:', error);
       throw error;
     }
   }
@@ -115,7 +116,7 @@ class ForecastService {
       const response = await api.post('/collaborators/forecast', params);
       return response.data;
     } catch (error) {
-      console.error('Error creating forecast:', error);
+      logger.error('Error creating forecast:', error);
       throw error;
     }
   }
@@ -128,7 +129,7 @@ class ForecastService {
       const response = await api.post('/collaborators/forecast/batch', params);
       return response.data;
     } catch (error) {
-      console.error('Error creating forecast batch:', error);
+      logger.error('Error creating forecast batch:', error);
       throw error;
     }
   }
@@ -147,7 +148,7 @@ class ForecastService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching forecasts:', error);
+      logger.error('Error fetching forecasts:', error);
       throw error;
     }
   }
@@ -160,7 +161,7 @@ class ForecastService {
       const response = await api.put(`/collaborators/forecast/${forecastId}`, params);
       return response.data;
     } catch (error) {
-      console.error('Error updating forecast:', error);
+      logger.error('Error updating forecast:', error);
       throw error;
     }
   }
@@ -173,7 +174,7 @@ class ForecastService {
       const response = await api.delete(`/collaborators/forecast/${forecastId}`);
       return response.data;
     } catch (error) {
-      console.error('Error deleting forecast:', error);
+      logger.error('Error deleting forecast:', error);
       throw error;
     }
   }
@@ -212,7 +213,7 @@ class ForecastService {
       const response = await api.get(`/collaborators/forecast/${forecastId}/group`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching forecast group:', error);
+      logger.error('Error fetching forecast group:', error);
       throw error;
     }
   }
@@ -227,7 +228,7 @@ class ForecastService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error deleting forecast group:', error);
+      logger.error('Error deleting forecast group:', error);
       throw error;
     }
   }

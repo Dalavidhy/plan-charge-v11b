@@ -5,6 +5,7 @@ import { setSEO } from "@/lib/seo";
 import collaboratorsService from "@/services/collaborators.service";
 import { Loader2, AlertCircle, Download, RefreshCw, Edit, Check, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { logger } from '@/utils/logger';
 
 export default function Collaborateurs() {
   const { state, dispatch } = useAppStore();
@@ -34,7 +35,7 @@ export default function Collaborateurs() {
       const collaborators = await collaboratorsService.getCollaborators();
       dispatch({ type: "SET_COLLABORATEURS", collaborateurs: collaborators });
     } catch (err) {
-      console.error("Error loading collaborators:", err);
+      logger.error("Error loading collaborators:", err);
       setError("Erreur lors du chargement des collaborateurs");
       toast({
         title: "Erreur",
@@ -57,7 +58,7 @@ export default function Collaborateurs() {
         description: "Statut mis à jour",
       });
     } catch (err) {
-      console.error("Error toggling active status:", err);
+      logger.error("Error toggling active status:", err);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour le statut",
@@ -79,7 +80,7 @@ export default function Collaborateurs() {
         description: "Éligibilité TR mise à jour",
       });
     } catch (err) {
-      console.error("Error toggling TR eligibility:", err);
+      logger.error("Error toggling TR eligibility:", err);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour l'éligibilité TR",
@@ -123,7 +124,7 @@ export default function Collaborateurs() {
         description: "Matricule mis à jour",
       });
     } catch (err) {
-      console.error("Error updating matricule:", err);
+      logger.error("Error updating matricule:", err);
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour le matricule",

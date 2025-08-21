@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import payfitService, { PayfitSyncLog } from '@/services/payfit.service';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function PayfitSyncLogs() {
   const [logs, setLogs] = useState<PayfitSyncLog[]>([]);
@@ -65,7 +66,7 @@ export default function PayfitSyncLogs() {
       setLogs(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des logs');
-      console.error('Error loading sync logs:', error);
+      logger.error('Error loading sync logs:', error);
     } finally {
       setLoading(false);
     }

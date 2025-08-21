@@ -6,6 +6,7 @@ import { setSEO } from "@/lib/seo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import trService, { TRMonthData, TREmployee } from "@/services/tr.service";
 import { toast } from "sonner";
+import { logger } from '@/utils/logger';
 
 export default function DroitsTR() {
   const now = new Date();
@@ -44,7 +45,7 @@ export default function DroitsTR() {
       const errorMessage = 'Erreur lors du chargement des données TR';
       setError(errorMessage);
       toast.error(errorMessage);
-      console.error('Error loading TR data:', err);
+      logger.error('Error loading TR data:', err);
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function DroitsTR() {
       toast.success('Export CSV généré avec succès');
     } catch (err) {
       toast.error('Erreur lors de l\'export CSV');
-      console.error('Error exporting CSV:', err);
+      logger.error('Error exporting CSV:', err);
     }
   };
 

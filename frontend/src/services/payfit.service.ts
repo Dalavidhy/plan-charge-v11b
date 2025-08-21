@@ -2,6 +2,7 @@
  * Payfit service for API communication
  */
 import api from '../config/api';
+import { logger } from '@/utils/logger';
 
 export interface PayfitEmployee {
   id: string;
@@ -128,13 +129,13 @@ class PayfitService {
   // Connection test
   async testConnection(): Promise<{ status: string; message: string }> {
     try {
-      console.log('🧪 PayfitService: Testing connection to Payfit API...');
+      logger.debug('🧪 PayfitService: Testing connection to Payfit API...');
       const response = await api.post('/payfit/sync/test-connection');
-      console.log('✅ PayfitService: Connection test successful', response.data);
+      logger.debug('✅ PayfitService: Connection test successful', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('❌ PayfitService: Connection test failed', error);
-      console.error('📋 Error details:', {
+      logger.error('❌ PayfitService: Connection test failed', error);
+      logger.error('📋 Error details:', {
         status: error?.response?.status,
         statusText: error?.response?.statusText,
         data: error?.response?.data,

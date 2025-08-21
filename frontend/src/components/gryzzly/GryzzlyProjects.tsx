@@ -21,6 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, Search, FolderOpen, DollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import gryzzlyService, { GryzzlyProject } from '@/services/gryzzly.service';
+import { logger } from '@/utils/logger';
 
 export default function GryzzlyProjects() {
   const [projects, setProjects] = useState<GryzzlyProject[]>([]);
@@ -44,7 +45,7 @@ export default function GryzzlyProjects() {
       setProjects(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des projets');
-      console.error('Error loading projects:', error);
+      logger.error('Error loading projects:', error);
     } finally {
       setLoading(false);
     }

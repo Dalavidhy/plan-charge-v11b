@@ -18,8 +18,16 @@ depends_on = None
 
 def upgrade() -> None:
     """Add azure_id column to users table."""
-    op.add_column('users', sa.Column('azure_id', sa.String(length=255), nullable=True))
-    op.create_index('ix_users_azure_id', 'users', ['azure_id'])
+    # Check if column already exists
+    from alembic import context
+    conn = context.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT column_name FROM information_schema.columns "
+        "WHERE table_name = 'users' AND column_name = 'azure_id'"
+    ))
+    if not result.fetchone():
+        op.add_column('users', sa.Column('azure_id', sa.String(length=255), nullable=True))
+        op.create_index('ix_users_azure_id', 'users', ['azure_id'])
 
 
 def downgrade() -> None:

@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import gryzzlyService, { GryzzlySyncLog } from '@/services/gryzzly.service';
+import { logger } from '@/utils/logger';
 
 export default function GryzzlySyncLogs() {
   const [syncLogs, setSyncLogs] = useState<GryzzlySyncLog[]>([]);
@@ -67,7 +68,7 @@ export default function GryzzlySyncLogs() {
       setSyncLogs(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des logs de synchronisation');
-      console.error('Error loading sync logs:', error);
+      logger.error('Error loading sync logs:', error);
     } finally {
       setLoading(false);
     }

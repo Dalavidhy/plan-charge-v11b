@@ -21,6 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Search, UserCheck, UserX } from 'lucide-react';
 import payfitService, { PayfitEmployee } from '@/services/payfit.service';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function PayfitEmployees() {
   const [employees, setEmployees] = useState<PayfitEmployee[]>([]);
@@ -42,7 +43,7 @@ export default function PayfitEmployees() {
       setEmployees(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des employés');
-      console.error('Error loading employees:', error);
+      logger.error('Error loading employees:', error);
     } finally {
       setLoading(false);
     }

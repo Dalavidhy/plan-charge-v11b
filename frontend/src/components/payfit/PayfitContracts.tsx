@@ -21,6 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, FileText, Clock } from 'lucide-react';
 import payfitService, { PayfitContract } from '@/services/payfit.service';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function PayfitContracts() {
   const [contracts, setContracts] = useState<PayfitContract[]>([]);
@@ -41,7 +42,7 @@ export default function PayfitContracts() {
       setContracts(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des contrats');
-      console.error('Error loading contracts:', error);
+      logger.error('Error loading contracts:', error);
     } finally {
       setLoading(false);
     }

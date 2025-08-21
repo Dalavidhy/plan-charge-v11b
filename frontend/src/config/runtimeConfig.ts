@@ -3,6 +3,7 @@
  * Loads configuration from window.ENV_CONFIG (injected by entrypoint.sh)
  * Falls back to import.meta.env for development
  */
+import { logger } from '@/utils/logger';
 
 interface RuntimeConfig {
   VITE_AZURE_AD_CLIENT_ID: string;
@@ -95,4 +96,4 @@ export const runtimeConfig = {
 };
 
 // Log configuration on load for debugging
-console.log('🔧 Runtime Configuration Loaded:', runtimeConfig.debugInfo);
+logger.debug('🔧 Runtime Configuration Loaded:', runtimeConfig.debugInfo);

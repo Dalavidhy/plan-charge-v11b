@@ -933,18 +933,34 @@ async def get_forecast_group(
         raise HTTPException(status_code=404, detail="Forecast not found")
     
     # Define time window for grouping (forecasts created within 2 seconds of each other)
+    from datetime import timezone
+    
+    # Ensure created_at is timezone-aware for comparison
+    if reference_forecast.created_at.tzinfo is None:
+        # If naive, assume UTC
+        created_at_aware = reference_forecast.created_at.replace(tzinfo=timezone.utc)
+    else:
+        created_at_aware = reference_forecast.created_at
+    
     time_window = timedelta(seconds=2)
-    min_time = reference_forecast.created_at - time_window
-    max_time = reference_forecast.created_at + time_window
+    min_time = created_at_aware - time_window
+    max_time = created_at_aware + time_window
     
     # Find all forecasts in the same group
+    # Use func.timezone to ensure proper comparison in database
     group_query = select(Forecast).where(
         and_(
             Forecast.collaborator_id == reference_forecast.collaborator_id,
             Forecast.project_id == reference_forecast.project_id,
             Forecast.hours == reference_forecast.hours,
-            Forecast.created_at >= min_time,
-            Forecast.created_at <= max_time
+            func.coalesce(
+                func.timezone('UTC', Forecast.created_at),
+                Forecast.created_at
+            ) >= min_time,
+            func.coalesce(
+                func.timezone('UTC', Forecast.created_at),
+                Forecast.created_at
+            ) <= max_time
         )
     )
     

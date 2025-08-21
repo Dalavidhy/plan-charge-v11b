@@ -1,0 +1,195 @@
+"""
+Future Celery tasks to be implemented when needed.
+
+This file documents planned async tasks that are not yet implemented.
+When ready to implement, copy the relevant function to tasks.py and implement the logic.
+"""
+
+from celery import Celery
+from celery.schedules import crontab
+
+# Example task implementations for future reference
+
+def sync_external_data_example():
+    """
+    Sync data from external providers (Payfit, Gryzzly).
+    
+    Implementation checklist:
+    - [ ] Fetch data from Payfit API
+    - [ ] Fetch data from Gryzzly API
+    - [ ] Map external data to internal models
+    - [ ] Handle conflicts and duplicates
+    - [ ] Update local database
+    - [ ] Log sync results
+    
+    Schedule: Every 6 hours
+    """
+    pass
+
+
+def calculate_utilization_example():
+    """
+    Calculate and cache utilization metrics.
+    
+    Implementation checklist:
+    - [ ] Calculate team utilization rates
+    - [ ] Calculate individual person utilization
+    - [ ] Aggregate project allocations
+    - [ ] Cache results in Redis with TTL
+    - [ ] Generate utilization reports
+    
+    Schedule: Daily at 2 AM
+    """
+    pass
+
+
+def cleanup_old_sessions_example():
+    """
+    Clean up expired sessions and tokens.
+    
+    Implementation checklist:
+    - [ ] Remove expired refresh tokens
+    - [ ] Clean up old audit logs (>90 days)
+    - [ ] Remove soft-deleted records past retention period
+    - [ ] Clean up temporary files
+    - [ ] Vacuum database if needed
+    
+    Schedule: Daily at 3 AM
+    """
+    pass
+
+
+def send_email_example(to: str, subject: str, body: str, html_body: str = None):
+    """
+    Send email notification via SMTP or email service.
+    
+    Implementation checklist:
+    - [ ] Configure SMTP settings (host, port, credentials)
+    - [ ] Support both text and HTML emails
+    - [ ] Handle attachments
+    - [ ] Add email templates
+    - [ ] Implement retry logic for failures
+    - [ ] Log email sending status
+    
+    Usage:
+    send_email.delay(
+        to="user@example.com",
+        subject="Notification",
+        body="Plain text content",
+        html_body="<h1>HTML content</h1>"
+    )
+    """
+    pass
+
+
+def generate_report_example(report_type: str, params: dict):
+    """
+    Generate async reports (PDF, Excel, CSV).
+    
+    Report types:
+    - utilization: Team and person utilization reports
+    - allocation: Resource allocation reports
+    - forecast: Capacity forecast reports
+    - timesheet: Timesheet and billing reports
+    
+    Implementation checklist:
+    - [ ] Generate report based on type
+    - [ ] Support multiple export formats (PDF, Excel, CSV)
+    - [ ] Store result in S3 or database
+    - [ ] Send notification when complete
+    - [ ] Implement progress tracking
+    
+    Usage:
+    generate_report.delay(
+        report_type="utilization",
+        params={"team_id": "123", "date_range": "2024-01"}
+    )
+    """
+    pass
+
+
+def process_bulk_import_example(file_path: str, import_type: str):
+    """
+    Process bulk import from CSV/Excel files.
+    
+    Import types:
+    - people: Import people/employees
+    - projects: Import projects
+    - allocations: Import resource allocations
+    - timesheets: Import timesheet entries
+    
+    Implementation checklist:
+    - [ ] Read and parse CSV/Excel file
+    - [ ] Validate data format and required fields
+    - [ ] Check for duplicates
+    - [ ] Import into database with transaction
+    - [ ] Generate import report with success/error counts
+    - [ ] Send notification with results
+    
+    Usage:
+    process_bulk_import.delay(
+        file_path="/uploads/people.csv",
+        import_type="people"
+    )
+    """
+    pass
+
+
+def sync_payfit_data_example():
+    """
+    Specific task for Payfit synchronization.
+    
+    Implementation checklist:
+    - [ ] Authenticate with Payfit API
+    - [ ] Fetch employee list
+    - [ ] Fetch contracts
+    - [ ] Fetch absences
+    - [ ] Fetch payroll data
+    - [ ] Update local database
+    - [ ] Generate sync report
+    """
+    pass
+
+
+def sync_gryzzly_data_example():
+    """
+    Specific task for Gryzzly synchronization.
+    
+    Implementation checklist:
+    - [ ] Authenticate with Gryzzly API
+    - [ ] Fetch collaborators
+    - [ ] Fetch projects and tasks
+    - [ ] Fetch time declarations
+    - [ ] Update local database
+    - [ ] Generate sync report
+    """
+    pass
+
+
+# Scheduled task configuration example
+BEAT_SCHEDULE_EXAMPLE = {
+    "sync-external-data": {
+        "task": "app.tasks.sync_external_data",
+        "schedule": crontab(minute=0, hour="*/6"),  # Every 6 hours
+    },
+    "calculate-utilization": {
+        "task": "app.tasks.calculate_utilization",
+        "schedule": crontab(minute=0, hour=2),  # Daily at 2 AM
+    },
+    "cleanup-old-sessions": {
+        "task": "app.tasks.cleanup_old_sessions",
+        "schedule": crontab(minute=0, hour=3),  # Daily at 3 AM
+    },
+    "sync-payfit": {
+        "task": "app.tasks.sync_payfit_data",
+        "schedule": crontab(minute=0, hour=1),  # Daily at 1 AM
+    },
+    "sync-gryzzly": {
+        "task": "app.tasks.sync_gryzzly_data",
+        "schedule": crontab(minute=30, hour=1),  # Daily at 1:30 AM
+    },
+    "weekly-reports": {
+        "task": "app.tasks.generate_weekly_reports",
+        "schedule": crontab(hour=9, minute=0, day_of_week=1),  # Monday 9 AM
+    },
+}

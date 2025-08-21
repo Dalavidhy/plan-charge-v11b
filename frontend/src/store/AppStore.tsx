@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from "react";
 import { useAuth } from "@/context/AuthContext";
 import collaboratorsService from "@/services/collaborators.service";
+import { logger } from '@/utils/logger';
 
 export type Collaborateur = {
   id: string;
@@ -239,15 +240,15 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      console.log("🔄 AppStore: Auto-loading collaborators");
+      logger.debug("🔄 AppStore: Auto-loading collaborators");
       dispatch({ type: "SET_COLLABORATEURS_LOADING", loading: true });
       
       try {
         const collaborators = await collaboratorsService.getCollaborators();
-        console.log("✅ AppStore: Loaded", collaborators.length, "collaborators");
+        logger.debug("✅ AppStore: Loaded", collaborators.length, "collaborators");
         dispatch({ type: "SET_COLLABORATEURS", collaborateurs: collaborators });
       } catch (error) {
-        console.error("❌ AppStore: Failed to load collaborators:", error);
+        logger.error("❌ AppStore: Failed to load collaborators:", error);
         dispatch({ type: "SET_COLLABORATEURS_ERROR", error: "Impossible de charger les collaborateurs" });
       }
     };

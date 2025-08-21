@@ -282,44 +282,54 @@ docker compose -f docker-compose.test.yml up --abort-on-container-exit
 
 ## 🚢 Production Deployment
 
-### Using Docker Compose
+### AWS Infrastructure
+The application is deployed on AWS using:
+- **ECS Fargate** for containerized services
+- **Application Load Balancer** for traffic routing
+- **CloudFront CDN** for global distribution
+- **RDS PostgreSQL** for database
+- **ElastiCache Redis** for caching
+
+For detailed deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+### Quick Deployment
 ```bash
-# Create production environment file
-cp .env.example .env.production
-# Edit .env.production with production values
+# Build and push Docker images to ECR
+aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin [ACCOUNT].dkr.ecr.eu-west-3.amazonaws.com
+docker build -t plan-charge-backend backend/
+docker tag plan-charge-backend:latest [ACCOUNT].dkr.ecr.eu-west-3.amazonaws.com/plan-charge/backend:latest
+docker push [ACCOUNT].dkr.ecr.eu-west-3.amazonaws.com/plan-charge/backend:latest
 
-# Start production stack
-docker compose -f docker-compose.prod.yml up -d
+# Update ECS service
+aws ecs update-service --cluster plan-charge-prod-cluster --service plan-charge-prod-backend --force-new-deployment
 
-# View production logs
-docker compose -f docker-compose.prod.yml logs -f
+# Invalidate CloudFront cache
+aws cloudfront create-invalidation --distribution-id E3U93II4ZE9MCI --paths "/*"
 ```
 
 ### Environment Variables
-Key production variables to configure:
+Key production variables (stored in AWS Secrets Manager):
 - `DATABASE_URL`: PostgreSQL connection string
 - `REDIS_URL`: Redis connection string
 - `JWT_SECRET_KEY`: Strong random secret
-- `CORS_ORIGINS`: Allowed origins
-- `SENTRY_DSN`: Error tracking (optional)
-
-### SSL/TLS Configuration
-1. Place certificates in `docker/nginx/certs/`
-2. Uncomment SSL sections in `docker/nginx/nginx.conf`
-3. Update `CORS_ORIGINS` to use HTTPS URLs
+- `CORS_ORIGINS`: https://plan-de-charge.aws.nda-partners.com
+- `AZURE_CLIENT_ID`: Azure AD application ID
+- `AZURE_TENANT_ID`: Azure AD tenant ID
 
 ### Database Backup
 ```bash
-# Backup database
-docker compose exec postgres pg_dump -U plancharge plancharge > backup.sql
+# Backup RDS database
+aws rds create-db-snapshot --db-instance-identifier plan-charge-prod-db --db-snapshot-identifier backup-$(date +%Y%m%d)
 
-# Restore database
-docker compose exec -T postgres psql -U plancharge plancharge < backup.sql
+# Restore from snapshot
+aws rds restore-db-instance-from-db-snapshot --db-instance-identifier plan-charge-prod-db-restored --db-snapshot-identifier backup-20240115
 ```
 
 ## 🔧 Troubleshooting
 
-### Common Issues
+For production issues and their solutions, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+### Common Development Issues
 
 **Port Already in Use**
 ```bash

@@ -7,6 +7,7 @@ import { loginRequest, isMSALConfigured } from "@/config/msalConfig";
 import { InteractionRequiredAuthError, AuthenticationResult } from "@azure/msal-browser";
 import { api } from "@/config/api";
 import { useAuth } from "@/context/AuthContext";
+import { logger } from "@/utils/logger";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export default function Auth() {
     
     // Reset redirect count when component mounts (user navigated back to login)
     setRedirectCount(0);
-    console.log("🔄 Auth.tsx: Component mounted, reset redirect count");
+    logger.log("🔄 Auth.tsx: Component mounted, reset redirect count");
   }, []);
 
   // Handle authentication state changes - but prevent multiple calls
@@ -40,10 +41,10 @@ export default function Auth() {
       // Additional check: only if we don't have backend tokens yet
       const existingToken = localStorage.getItem("access_token");
       if (!existingToken) {
-        console.log("🔄 Auth.tsx: MSAL authenticated but no backend tokens, starting token exchange");
+        logger.log("🔄 Auth.tsx: MSAL authenticated but no backend tokens, starting token exchange");
         handleAuthenticationSuccess();
       } else {
-        console.log("✅ Auth.tsx: Already have backend tokens, marking as processed");
+        logger.log("✅ Auth.tsx: Already have backend tokens, marking as processed");
         setHasProcessedAuth(true); // Mark as processed to prevent further calls
       }
     }
@@ -51,30 +52,30 @@ export default function Auth() {
 
   // Redirect if already fully authenticated - with anti-loop protection
   useEffect(() => {
-    console.log("🔀 Auth.tsx: Checking redirect - isAuthLoading:", isAuthLoading, "isBackendAuth:", isBackendAuthenticated, "redirectCount:", redirectCount);
+    logger.log("🔀 Auth.tsx: Checking redirect - isAuthLoading:", isAuthLoading, "isBackendAuth:", isBackendAuthenticated, "redirectCount:", redirectCount);
     
     // Wait for auth context to fully load
     if (isAuthLoading) {
-      console.log("⏳ Auth.tsx: AuthContext still loading, waiting...");
+      logger.log("⏳ Auth.tsx: AuthContext still loading, waiting...");
       return;
     }
     
     // Anti-loop protection: if we've tried to redirect too many times, stop
     if (redirectCount >= 3) {
-      console.error("🚨 Auth.tsx: Too many redirect attempts, stopping to prevent infinite loop");
+      logger.error("🚨 Auth.tsx: Too many redirect attempts, stopping to prevent infinite loop");
       setError("Problème de redirection détecté. Rechargez la page ou essayez de naviguer manuellement vers /plan");
       return;
     }
     
     // If user is fully authenticated via AuthContext, redirect to plan
     if (isBackendAuthenticated) {
-      console.log("🚀 Auth.tsx: User authenticated via AuthContext, redirecting to /plan (attempt", redirectCount + 1, ")");
+      logger.log("🚀 Auth.tsx: User authenticated via AuthContext, redirecting to /plan (attempt", redirectCount + 1, ")");
       setRedirectCount(prev => prev + 1);
       navigate("/plan", { replace: true });
       return;
     }
     
-    console.log("🔍 Auth.tsx: User not yet authenticated, staying on login page");
+    logger.log("🔍 Auth.tsx: User not yet authenticated, staying on login page");
   }, [isBackendAuthenticated, isAuthLoading, navigate, redirectCount]);
 
   // Note: MSAL React automatically handles redirects, no manual handling needed
@@ -84,11 +85,11 @@ export default function Auth() {
    */
   const handleAuthenticationSuccess = async () => {
     if (isLoading || hasProcessedAuth) {
-      console.log("🔄 Auth.tsx: handleAuthenticationSuccess() already in progress, skipping");
+      logger.log("🔄 Auth.tsx: handleAuthenticationSuccess() already in progress, skipping");
       return; // Prevent multiple simultaneous calls
     }
     
-    console.log("🚀 Auth.tsx: Starting handleAuthenticationSuccess()");
+    logger.log("🚀 Auth.tsx: Starting handleAuthenticationSuccess()");
     setIsLoading(true);
     setHasProcessedAuth(true); // Mark as processing to prevent duplicate calls
     setError("");
@@ -97,7 +98,7 @@ export default function Auth() {
       // Check if we already have valid backend tokens
       const existingToken = localStorage.getItem("access_token");
       if (existingToken) {
-        console.log("✅ Auth.tsx: User already has backend tokens, redirecting to /plan");
+        logger.log("✅ Auth.tsx: User already has backend tokens, redirecting to /plan");
         navigate("/plan", { replace: true });
         return;
       }
@@ -107,14 +108,14 @@ export default function Auth() {
         throw new Error("No account found");
       }
 
-      console.log("🔍 Auth.tsx: Getting access token for user:", account.username);
+      logger.log("🔍 Auth.tsx: Getting access token for user:", account.username);
       // Get access token from MSAL
       const tokenResponse = await instance.acquireTokenSilent({
         ...loginRequest,
         account: account,
       });
 
-      console.log("✅ Auth.tsx: MSAL token acquired, sending to backend");
+      logger.log("✅ Auth.tsx: MSAL token acquired, sending to backend");
       // Send Azure AD token to backend to create/update user
       const backendResponse = await api.post('/auth/sso/token-exchange', {
         azureToken: tokenResponse.accessToken,
@@ -126,12 +127,12 @@ export default function Auth() {
         }
       });
 
-      console.log("✅ Auth.tsx: Backend token exchange successful");
+      logger.log("✅ Auth.tsx: Backend token exchange successful");
       // Store backend tokens
       localStorage.setItem("access_token", backendResponse.data.access_token);
       localStorage.setItem("refresh_token", backendResponse.data.refresh_token);
       
-      console.log("🚀 Auth.tsx: Tokens stored, navigating to /plan");
+      logger.log("🚀 Auth.tsx: Tokens stored, navigating to /plan");
       // Navigate to main app
       navigate("/plan", { replace: true });
       

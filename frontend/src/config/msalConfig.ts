@@ -4,6 +4,7 @@
 
 import { Configuration, LogLevel } from "@azure/msal-browser";
 import { runtimeConfig } from "./runtimeConfig";
+import { logger } from '@/utils/logger';
 
 // Get configuration from runtime config (supports both build-time and runtime injection)
 const AZURE_AD_CLIENT_ID = runtimeConfig.azureClientId;
@@ -39,16 +40,16 @@ export const msalConfig: Configuration = {
         }
         switch (level) {
           case LogLevel.Error:
-            console.error("MSAL Error:", message);
+            logger.error("MSAL Error:", message);
             return;
           case LogLevel.Info:
-            console.info("MSAL Info:", message);
+            logger.info("MSAL Info:", message);
             return;
           case LogLevel.Verbose:
-            console.debug("MSAL Verbose:", message);
+            logger.debug("MSAL Verbose:", message);
             return;
           case LogLevel.Warning:
-            console.warn("MSAL Warning:", message);
+            logger.warn("MSAL Warning:", message);
             return;
           default:
             return;

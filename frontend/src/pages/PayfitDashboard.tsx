@@ -40,6 +40,7 @@ import PayfitEmployees from '@/components/payfit/PayfitEmployees';
 import PayfitAbsences from '@/components/payfit/PayfitAbsences';
 import PayfitContracts from '@/components/payfit/PayfitContracts';
 import PayfitSyncLogs from '@/components/payfit/PayfitSyncLogs';
+import { logger } from '@/utils/logger';
 
 export default function PayfitDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -56,22 +57,22 @@ export default function PayfitDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('📊 PayfitDashboard: Loading data...');
+      logger.debug('📊 PayfitDashboard: Loading data...');
       const [statsData, statusData] = await Promise.all([
         payfitService.getStats(),
         payfitService.getStatus(),
       ]);
       setStats(statsData);
       setSyncStatus(statusData);
-      console.log('✅ PayfitDashboard: Data loaded successfully', { statsData, statusData });
+      logger.debug('✅ PayfitDashboard: Data loaded successfully', { statsData, statusData });
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || 
                           error?.response?.data?.message || 
                           error?.message ||
                           'Erreur lors du chargement des données Payfit';
       toast.error(errorMessage);
-      console.error('❌ PayfitDashboard: Error loading data:', error);
-      console.error('📋 Error details:', {
+      logger.error('❌ PayfitDashboard: Error loading data:', error);
+      logger.error('📋 Error details:', {
         status: error?.response?.status,
         statusText: error?.response?.statusText,
         data: error?.response?.data,
@@ -91,7 +92,7 @@ export default function PayfitDashboard() {
       await loadData();
     } catch (error) {
       toast.error('Impossible de se connecter à l\'API Payfit');
-      console.error('Connection test failed:', error);
+      logger.error('Connection test failed:', error);
     }
   };
 
@@ -127,7 +128,7 @@ export default function PayfitDashboard() {
                           error?.message ||
                           `Erreur lors de la synchronisation ${type}`;
       toast.error(errorMessage);
-      console.error(`Sync ${type} failed:`, error);
+      logger.error(`Sync ${type} failed:`, error);
     } finally {
       setSyncing(false);
     }

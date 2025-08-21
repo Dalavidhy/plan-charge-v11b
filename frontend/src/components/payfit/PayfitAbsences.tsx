@@ -27,6 +27,7 @@ import {
 import { Loader2, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import payfitService, { PayfitAbsence } from '@/services/payfit.service';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function PayfitAbsences() {
   const [absences, setAbsences] = useState<PayfitAbsence[]>([]);
@@ -49,7 +50,7 @@ export default function PayfitAbsences() {
       setAbsences(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des absences');
-      console.error('Error loading absences:', error);
+      logger.error('Error loading absences:', error);
     } finally {
       setLoading(false);
     }

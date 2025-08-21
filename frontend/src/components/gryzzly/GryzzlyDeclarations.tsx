@@ -44,6 +44,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 import gryzzlyService, { 
   GryzzlyDeclaration, 
   GryzzlyCollaborator, 
@@ -107,7 +108,7 @@ export default function GryzzlyDeclarations() {
       setDeclarations(declarationsData);
     } catch (error) {
       toast.error('Erreur lors du chargement des déclarations');
-      console.error('Error loading declarations:', error);
+      logger.error('Error loading declarations:', error);
     } finally {
       setLoading(false);
     }

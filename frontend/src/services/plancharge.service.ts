@@ -2,6 +2,7 @@
  * Plan de Charge service for fetching aggregated data
  */
 import api from '../config/api';
+import { logger } from '@/utils/logger';
 
 export interface PlanChargeDeclaration {
   project_id: string;
@@ -51,7 +52,7 @@ class PlanChargeService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching plan de charge data:', error);
+      logger.error('Error fetching plan de charge data:', error);
       throw error;
     }
   }

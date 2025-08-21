@@ -1,14 +1,15 @@
 import axios from 'axios';
 import { runtimeConfig } from './runtimeConfig';
+import { logger } from '@/utils/logger';
 
 // API Base URL - use runtime config (supports both build-time and runtime injection)
 const API_BASE_URL = runtimeConfig.apiUrl;
 
 // Debug logging for API configuration
-console.log('=== API CONFIG DEBUG ===');
-console.log('Runtime config API URL:', runtimeConfig.apiUrl);
-console.log('Computed API_BASE_URL:', API_BASE_URL);
-console.log('Runtime config debug:', runtimeConfig.debugInfo);
+logger.debug('=== API CONFIG DEBUG ===');
+logger.debug('Runtime config API URL:', runtimeConfig.apiUrl);
+logger.debug('Computed API_BASE_URL:', API_BASE_URL);
+logger.debug('Runtime config debug:', runtimeConfig.debugInfo);
 
 // Create axios instance with default config
 export const api = axios.create({
@@ -23,7 +24,7 @@ api.interceptors.request.use(
   (config) => {
     // Debug: Log the final URL being called
     const finalURL = config.baseURL + config.url;
-    console.log('🌐 API Request:', config.method?.toUpperCase(), finalURL);
+    logger.debug('🌐 API Request:', config.method?.toUpperCase(), finalURL);
     
     const token = localStorage.getItem('access_token');
     if (token) {

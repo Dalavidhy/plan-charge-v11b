@@ -2,6 +2,7 @@
  * Gryzzly service for API communication
  */
 import api from '../config/api';
+import { logger } from '@/utils/logger';
 
 export interface GryzzlyCollaborator {
   id: string;
@@ -135,13 +136,13 @@ class GryzzlyService {
   // Connection test
   async testConnection(): Promise<{ status: string; message: string }> {
     try {
-      console.log('🧪 GryzzlyService: Testing connection to Gryzzly API...');
+      logger.debug('🧪 GryzzlyService: Testing connection to Gryzzly API...');
       const response = await api.post('/gryzzly/sync/test-connection');
-      console.log('✅ GryzzlyService: Connection test successful', response.data);
+      logger.debug('✅ GryzzlyService: Connection test successful', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('❌ GryzzlyService: Connection test failed', error);
-      console.error('📋 Error details:', {
+      logger.error('❌ GryzzlyService: Connection test failed', error);
+      logger.error('📋 Error details:', {
         status: error?.response?.status,
         statusText: error?.response?.statusText,
         data: error?.response?.data,

@@ -1,6 +1,6 @@
 """Audit and security models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, JSON, String, Text, Index
 from sqlalchemy.dialects.postgresql import INET, UUID
@@ -56,7 +56,7 @@ class RefreshToken(BaseModel):
     @property
     def is_expired(self) -> bool:
         """Check if token is expired."""
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
     
     @property
     def is_revoked(self) -> bool:

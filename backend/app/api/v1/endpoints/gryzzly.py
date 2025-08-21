@@ -158,8 +158,12 @@ async def sync_collaborators(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """Trigger collaborator synchronization from Gryzzly"""
-    # TODO: Convert to background task
+    """
+    Trigger collaborator synchronization from Gryzzly.
+    
+    Note: Currently runs synchronously. For large datasets, consider
+    implementing as a background task using Celery (see tasks_future.py.example).
+    """
     sync_service = GryzzlySyncService(session)
     try:
         result = await sync_service.sync_collaborators()

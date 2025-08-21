@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Search, User, UserCheck, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import gryzzlyService, { GryzzlyCollaborator } from '@/services/gryzzly.service';
+import { logger } from '@/utils/logger';
 
 export default function GryzzlyCollaborators() {
   const [collaborators, setCollaborators] = useState<GryzzlyCollaborator[]>([]);
@@ -41,7 +42,7 @@ export default function GryzzlyCollaborators() {
       setCollaborators(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des collaborateurs');
-      console.error('Error loading collaborators:', error);
+      logger.error('Error loading collaborators:', error);
     } finally {
       setLoading(false);
     }

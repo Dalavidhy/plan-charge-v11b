@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { authAPI } from "@/config/api";
+import { logger } from "@/utils/logger";
 
 interface User {
   id: string;
@@ -33,18 +34,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if user is authenticated on mount and when MSAL state changes
   useEffect(() => {
     const checkAuth = async () => {
-      console.log("🔍 AuthContext checkAuth() - inProgress:", inProgress, "msalAuth:", msalIsAuthenticated, "accounts:", accounts.length);
+      logger.debug("🔍 AuthContext checkAuth() - inProgress:", inProgress, "msalAuth:", msalIsAuthenticated, "accounts:", accounts.length);
       
       // If MSAL is still in progress, wait
       if (inProgress !== "none") {
-        console.log("⏳ AuthContext: MSAL in progress, waiting...");
+        logger.debug("⏳ AuthContext: MSAL in progress, waiting...");
         setIsLoading(true);
         return;
       }
       
       // If MSAL says not authenticated, don't check backend tokens
       if (!msalIsAuthenticated || accounts.length === 0) {
-        console.log("🚫 AuthContext: MSAL not authenticated, clearing state");
+        logger.debug("🚫 AuthContext: MSAL not authenticated, clearing state");
         setIsAuthenticated(false);
         setUser(null);
         setUserEmail(undefined);
@@ -54,27 +55,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // MSAL is authenticated, check if we have backend tokens
       const token = localStorage.getItem('access_token');
-      console.log("🔍 AuthContext: Has backend token:", !!token);
+      logger.debug("🔍 AuthContext: Has backend token:", !!token);
       
       if (token) {
         try {
-          console.log("🔍 AuthContext: Calling getCurrentUser() with token");
+          logger.debug("🔍 AuthContext: Calling getCurrentUser() with token");
           const userData = await authAPI.getCurrentUser();
-          console.log("✅ AuthContext: getCurrentUser() success, setting authenticated state");
+          logger.info("✅ AuthContext: getCurrentUser() success, setting authenticated state");
           setUser(userData);
           setIsAuthenticated(true);
           setUserEmail(userData.email);
         } catch (error: any) {
-          console.error("❌ AuthContext: getCurrentUser() failed:", error);
+          logger.error("❌ AuthContext: getCurrentUser() failed:", error);
           // Only clear tokens for 401 (unauthorized), not for network/server errors
           if (error.response?.status === 401) {
-            console.log("🧹 AuthContext: Token invalid (401), clearing storage");
+            logger.info("🧹 AuthContext: Token invalid (401), clearing storage");
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             setIsAuthenticated(false);
             setUser(null);
           } else {
-            console.log("⚠️ AuthContext: Network/server error, keeping tokens but showing as not authenticated");
+            logger.warn("⚠️ AuthContext: Network/server error, keeping tokens but showing as not authenticated");
             // For network errors, don't clear tokens but still show as not authenticated
             // This prevents constant clearing of valid tokens due to temporary network issues
             setIsAuthenticated(false);
@@ -84,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // No backend token but MSAL is authenticated
         // This means we need to complete the token exchange
-        console.log("🔄 AuthContext: No backend token, but MSAL authenticated - need token exchange");
+        logger.info("🔄 AuthContext: No backend token, but MSAL authenticated - need token exchange");
         setIsAuthenticated(false);
         setUser(null);
       }
@@ -96,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Log authentication state changes
   useEffect(() => {
-    console.log("🏁 AuthContext: Authentication state changed - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
+    logger.debug("🏁 AuthContext: Authentication state changed - isAuthenticated:", isAuthenticated, "isLoading:", isLoading);
   }, [isAuthenticated, isLoading]);
 
   const logout = async () => {
@@ -105,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await authAPI.logout();
     } catch (error) {
       // Continue with logout even if API call fails
-      console.error('Logout API call failed:', error);
+      logger.error('Logout API call failed:', error);
     } finally {
       // Clear everything locally
       setIsAuthenticated(false);
@@ -125,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           window.location.href = '/login';
         }
       } catch (error) {
-        console.error('MSAL logout failed:', error);
+        logger.error('MSAL logout failed:', error);
         window.location.href = '/login';
       }
     }
