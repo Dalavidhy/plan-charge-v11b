@@ -2,9 +2,9 @@ name: Tests
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   push:
-    branches: [main, develop]
+    branches: [main]
 
 env:
   PYTHON_VERSION: '3.11'

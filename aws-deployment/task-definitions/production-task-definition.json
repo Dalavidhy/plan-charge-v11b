@@ -1,0 +1,91 @@
+{
+  "family": "plan-charge-prod-backend",
+  "taskRoleArn": "arn:aws:iam::557937909547:role/plan-charge-prod-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::557937909547:role/plan-charge-prod-ecs-execution-role",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "557937909547.dkr.ecr.eu-west-3.amazonaws.com/plan-charge-backend:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "AWS_DEFAULT_REGION",
+          "value": "eu-west-3"
+        },
+        {
+          "name": "CORS_ORIGINS",
+          "value": "https://plan-de-charge.aws.nda-partners.com"
+        },
+        {
+          "name": "REDIS_HOST",
+          "value": "plan-charge-prod-redis.apow54.0001.euw3.cache.amazonaws.com"
+        },
+        {
+          "name": "REDIS_PORT",
+          "value": "6379"
+        },
+        {
+          "name": "DB_HOST",
+          "value": "plan-charge-prod-db.cm296zxv9y8r.eu-west-3.rds.amazonaws.com"
+        },
+        {
+          "name": "DB_PORT",
+          "value": "5432"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:ssm:eu-west-3:557937909547:parameter/plan-charge/prod/database-url"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:eu-west-3:557937909547:parameter/plan-charge/prod/jwt-secret"
+        },
+        {
+          "name": "GRYZZLY_API_URL",
+          "valueFrom": "arn:aws:ssm:eu-west-3:557937909547:parameter/plan-charge/prod/gryzzly-api-url"
+        },
+        {
+          "name": "PAYFIT_API_URL",
+          "valueFrom": "arn:aws:ssm:eu-west-3:557937909547:parameter/plan-charge/prod/payfit-api-url"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/plan-charge-prod-backend",
+          "awslogs-region": "eu-west-3",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

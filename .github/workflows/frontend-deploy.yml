@@ -2,7 +2,7 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-deploy.yml'
@@ -15,7 +15,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    environment: production
     
     steps:
       - name: Checkout code
@@ -30,17 +30,10 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "S3_BUCKET=plan-charge-prod-frontend" >> $GITHUB_ENV
-            echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PROD }}" >> $GITHUB_ENV
-            echo "API_URL=https://api.plan-de-charge.aws.nda-partners.com" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "S3_BUCKET=plan-charge-staging-frontend" >> $GITHUB_ENV
-            echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_STAGING }}" >> $GITHUB_ENV
-            echo "API_URL=https://api-staging.plan-de-charge.aws.nda-partners.com" >> $GITHUB_ENV
-          fi
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          echo "S3_BUCKET=plan-charge-prod-frontend" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PROD }}" >> $GITHUB_ENV
+          echo "API_URL=https://api.plan-de-charge.aws.nda-partners.com" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -104,11 +97,7 @@ jobs:
           sleep 30
           
           # Basic smoke test
-          if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
-            FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
-          else
-            FRONTEND_URL="https://staging.plan-de-charge.aws.nda-partners.com"
-          fi
+          FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
           
           # Check if the site is accessible
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)

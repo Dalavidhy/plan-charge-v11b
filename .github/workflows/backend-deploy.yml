@@ -2,7 +2,7 @@ name: Deploy Backend
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-deploy.yml'
@@ -16,7 +16,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    environment: production
     
     steps:
       - name: Checkout code
@@ -35,15 +35,9 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "ECS_SERVICE=plan-charge-prod-backend" >> $GITHUB_ENV
-            echo "IMAGE_TAG=latest" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "ECS_SERVICE=plan-charge-staging-backend" >> $GITHUB_ENV
-            echo "IMAGE_TAG=staging-${{ github.sha }}" >> $GITHUB_ENV
-          fi
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          echo "ECS_SERVICE=plan-charge-prod-backend" >> $GITHUB_ENV
+          echo "IMAGE_TAG=latest" >> $GITHUB_ENV
 
       - name: Build, tag, and push Docker image
         env:
