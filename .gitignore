@@ -174,4 +174,6 @@ frontend/dist/
 
 # Deployment artifacts
 backend/Dockerfile.*
-frontend/build/
+frontend/build/aws-deployment/terraform/.terraform/
+*.tfstate*
+*.terraform*

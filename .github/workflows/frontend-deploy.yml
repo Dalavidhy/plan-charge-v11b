@@ -1,0 +1,135 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-west-3
+  NODE_VERSION: '18'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set environment variables
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+            echo "S3_BUCKET=plan-charge-prod-frontend" >> $GITHUB_ENV
+            echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PROD }}" >> $GITHUB_ENV
+            echo "API_URL=https://api.plan-de-charge.aws.nda-partners.com" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+            echo "S3_BUCKET=plan-charge-staging-frontend" >> $GITHUB_ENV
+            echo "CLOUDFRONT_DISTRIBUTION_ID=${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_STAGING }}" >> $GITHUB_ENV
+            echo "API_URL=https://api-staging.plan-de-charge.aws.nda-partners.com" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run tests
+        run: |
+          cd frontend
+          npm run test -- --run
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          
+          # Set environment variables for build
+          export VITE_API_URL=${{ env.API_URL }}
+          export VITE_ENVIRONMENT=${{ env.ENVIRONMENT }}
+          export VITE_VERSION=${{ github.sha }}
+          
+          # Build the application
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: |
+          cd frontend
+          
+          # Sync files to S3 bucket
+          aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "service-worker.js"
+          
+          # Upload HTML files with no cache
+          aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ \
+            --delete \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --include "*.html" \
+            --include "service-worker.js"
+
+      - name: Invalidate CloudFront
+        if: env.CLOUDFRONT_DISTRIBUTION_ID
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          
+          # Wait for CloudFront invalidation to complete (simplified)
+          sleep 30
+          
+          # Basic smoke test
+          if [[ "${{ env.ENVIRONMENT }}" == "production" ]]; then
+            FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
+          else
+            FRONTEND_URL="https://staging.plan-de-charge.aws.nda-partners.com"
+          fi
+          
+          # Check if the site is accessible
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)
+          if [[ $STATUS_CODE == "200" ]]; then
+            echo "✅ Frontend is accessible"
+          else
+            echo "❌ Frontend returned status code: $STATUS_CODE"
+            exit 1
+          fi
+
+      - name: Slack notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: |
+            Frontend deployment ${{ job.status }}!
+            Environment: ${{ env.ENVIRONMENT }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            S3 Bucket: ${{ env.S3_BUCKET }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
