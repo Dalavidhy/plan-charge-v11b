@@ -126,8 +126,12 @@ class GryzzlySyncService:
                     collaborator_dict = self._parse_collaborator_data(collab_data)
                     
                     if existing:
-                        # Update existing collaborator
+                        # Update existing collaborator, preserving matricule if not provided
                         for key, value in collaborator_dict.items():
+                            # Skip matricule if it's not provided to preserve existing value
+                            if key == "matricule" and value is None and getattr(existing, "matricule", None) is not None:
+                                logger.info(f"Gryzzly sync: Preserving existing matricule {getattr(existing, 'matricule')} for {existing.email}")
+                                continue
                             setattr(existing, key, value)
                         existing.last_synced_at = datetime.utcnow()
                         result["updated"] += 1
@@ -446,18 +450,28 @@ class GryzzlySyncService:
     
     def _parse_collaborator_data(self, data: Dict) -> Dict:
         """Parse Gryzzly collaborator data to match our model"""
-        return {
+        result = {
             "gryzzly_id": data["id"],
             "email": data.get("email", ""),
             "first_name": data.get("firstName", ""),
             "last_name": data.get("lastName", ""),
-            "matricule": data.get("matricule"),
             "department": data.get("department"),
             "position": data.get("position"),
             "is_active": data.get("isActive", True),
             "is_admin": data.get("isAdmin", False),
             "raw_data": data
         }
+        
+        # Only include matricule if provided by Gryzzly API
+        # This prevents overwriting existing matricules with None
+        matricule = data.get("matricule")
+        if matricule is not None:
+            result["matricule"] = matricule
+            logger.info(f"Gryzzly sync: Setting matricule {matricule} for {data.get('email', 'unknown')}")
+        else:
+            logger.info(f"Gryzzly sync: Preserving existing matricule for {data.get('email', 'unknown')}")
+            
+        return result
     
     def _parse_project_data(self, data: Dict) -> Dict:
         """Parse Gryzzly project data to match our model"""
