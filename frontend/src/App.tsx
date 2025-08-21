@@ -18,7 +18,7 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   // Wait for auth check to complete
   if (isLoading) {
     return (
@@ -30,12 +30,12 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
       </div>
     );
   }
-  
+
   // If not authenticated, redirect to login immediately
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return children;
 }
 

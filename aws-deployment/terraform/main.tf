@@ -3,14 +3,14 @@
 
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
   }
-  
+
   # Backend S3 pour le state (à créer manuellement)
   # backend "s3" {
   #   bucket = "nda-terraform-state-eu-west-3"
@@ -22,7 +22,7 @@ terraform {
 # Configuration des providers
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Project     = "Plan-Charge"
@@ -37,7 +37,7 @@ provider "aws" {
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"
-  
+
   default_tags {
     tags = {
       Project     = "Plan-Charge"
@@ -59,7 +59,7 @@ data "aws_caller_identity" "current" {}
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
   azs         = slice(data.aws_availability_zones.available.names, 0, 2)
-  
+
   common_tags = {
     Project     = var.project_name
     Environment = var.environment

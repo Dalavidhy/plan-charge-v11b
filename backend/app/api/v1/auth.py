@@ -9,44 +9,46 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.database import get_async_session
 from app.dependencies import get_current_active_user
-from app.models import User, UserOrgRole, RefreshToken, Organization
+from app.models import Organization, RefreshToken, User, UserOrgRole
 from app.schemas.auth import (
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     LoginResponse,
     RefreshRequest,
     RefreshResponse,
-    ForgotPasswordRequest,
-    ResetPasswordRequest,
-    ChangePasswordRequest,
-    UserInfo,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
+    UserInfo,
 )
 from app.schemas.sso import (
+    SSOCallbackRequest,
     SSOLoginRequest,
     SSOLoginResponse,
-    SSOCallbackRequest,
-    SSOTokenResponse,
     SSOLogoutRequest,
     SSOLogoutResponse,
     SSOStatusResponse,
-)
-from app.utils.security import (
-    verify_password,
-    get_password_hash,
-    create_access_token,
-    create_refresh_token,
-    verify_token,
+    SSOTokenResponse,
 )
 from app.services.azure_sso import azure_sso
-from app.config import settings
+from app.utils.security import (
+    create_access_token,
+    create_refresh_token,
+    get_password_hash,
+    verify_password,
+    verify_token,
+)
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     request: RegisterRequest,
     session: AsyncSession = Depends(get_async_session),
@@ -57,23 +59,23 @@ async def register(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Registration is disabled. Please use SSO to authenticate.",
         )
-    
+
     # Check if user already exists
     query = select(User).where(User.email == request.email)
     result = await session.execute(query)
     existing_user = result.scalar_one_or_none()
-    
+
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email already exists",
         )
-    
+
     # Get or create default organization
     org_query = select(Organization).where(Organization.name == "NDA Partners")
     org_result = await session.execute(org_query)
     organization = org_result.scalar_one_or_none()
-    
+
     if not organization:
         organization = Organization(
             name="NDA Partners",
@@ -81,7 +83,7 @@ async def register(
         )
         session.add(organization)
         await session.flush()
-    
+
     # Create new user
     hashed_password = get_password_hash(request.password)
     new_user = User(
@@ -91,11 +93,11 @@ async def register(
         org_id=organization.id,
         is_active=True,
     )
-    
+
     session.add(new_user)
     await session.commit()
     await session.refresh(new_user)
-    
+
     return RegisterResponse(
         id=new_user.id,
         email=new_user.email,
@@ -114,7 +116,7 @@ async def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Direct login is disabled. Please use SSO to authenticate.",
         )
-    
+
     # Find user by email
     query = (
         select(User)
@@ -126,10 +128,10 @@ async def login(
         .where(User.email == request.email)
         .where(User.is_active == True)
     )
-    
+
     result = await session.execute(query)
     user = result.scalar_one_or_none()
-    
+
     # Check if user exists and password is correct
     if not user or not verify_password(request.password, user.password_hash):
         raise HTTPException(
@@ -137,7 +139,7 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Create tokens
     access_token = create_access_token(
         subject=str(user.id),
@@ -147,7 +149,7 @@ async def login(
         subject=str(user.id),
         additional_claims={"org_id": str(user.org_id)},
     )
-    
+
     # Store refresh token in database
     refresh_token = RefreshToken(
         user_id=user.id,
@@ -159,16 +161,14 @@ async def login(
         },
     )
     session.add(refresh_token)
-    
+
     # Update last login
     await session.execute(
-        update(User)
-        .where(User.id == user.id)
-        .values(last_login_at=datetime.utcnow())
+        update(User).where(User.id == user.id).values(last_login_at=datetime.utcnow())
     )
-    
+
     await session.commit()
-    
+
     # Prepare user info
     user_info = UserInfo(
         id=user.id,
@@ -178,7 +178,7 @@ async def login(
         roles=[role.role for role in user.roles],
         person_id=user.person_id,
     )
-    
+
     return LoginResponse(
         access_token=access_token,
         refresh_token=refresh_token_str,
@@ -200,14 +200,14 @@ async def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
-    
+
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
-    
+
     # Check if refresh token exists in database
     token_hash = hashlib.sha256(request.refresh_token.encode()).hexdigest()
     query = (
@@ -216,30 +216,30 @@ async def refresh_token(
         .where(RefreshToken.token_hash == token_hash)
         .where(RefreshToken.revoked_at.is_(None))
     )
-    
+
     result = await session.execute(query)
     db_token = result.scalar_one_or_none()
-    
+
     if not db_token or not db_token.is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
         )
-    
+
     # Get user
     query = select(User).where(User.id == user_id).where(User.is_active == True)
     result = await session.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
-    
+
     # Revoke old refresh token
     db_token.revoked_at = datetime.utcnow()
-    
+
     # Create new tokens
     new_access_token = create_access_token(
         subject=str(user.id),
@@ -249,7 +249,7 @@ async def refresh_token(
         subject=str(user.id),
         additional_claims={"org_id": str(user.org_id)},
     )
-    
+
     # Store new refresh token
     new_db_token = RefreshToken(
         user_id=user.id,
@@ -259,9 +259,9 @@ async def refresh_token(
         device_info=db_token.device_info,
     )
     session.add(new_db_token)
-    
+
     await session.commit()
-    
+
     return RefreshResponse(
         access_token=new_access_token,
         refresh_token=new_refresh_token,
@@ -278,7 +278,7 @@ async def logout(
     """Logout and revoke refresh token."""
     # Hash the refresh token
     token_hash = hashlib.sha256(refresh_token.refresh_token.encode()).hexdigest()
-    
+
     # Revoke the refresh token
     await session.execute(
         update(RefreshToken)
@@ -286,7 +286,7 @@ async def logout(
         .where(RefreshToken.token_hash == token_hash)
         .values(revoked_at=datetime.utcnow())
     )
-    
+
     await session.commit()
 
 
@@ -298,17 +298,17 @@ async def forgot_password(
     """Request password reset."""
     # Always return success to prevent email enumeration
     # In a real application, send an email with reset link
-    
+
     # Check if user exists (but don't reveal this to the client)
     query = select(User).where(User.email == request.email)
     result = await session.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if user:
         # In production, generate reset token and send email
         # For now, just log the request
         pass
-    
+
     return {"message": "If the email exists, a password reset link has been sent"}
 
 
@@ -320,10 +320,10 @@ async def reset_password(
     """Reset password with token."""
     # In production, verify the reset token
     # For now, this is a placeholder
-    
+
     # Verify token (simplified for demo)
     # In production, use a proper token storage/verification system
-    
+
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail="Password reset not implemented in demo",
@@ -343,14 +343,14 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect current password",
         )
-    
+
     # Update password
     await session.execute(
         update(User)
         .where(User.id == current_user.id)
         .values(password_hash=get_password_hash(request.new_password))
     )
-    
+
     # Revoke all refresh tokens for security
     await session.execute(
         update(RefreshToken)
@@ -358,7 +358,7 @@ async def change_password(
         .where(RefreshToken.revoked_at.is_(None))
         .values(revoked_at=datetime.utcnow())
     )
-    
+
     await session.commit()
 
 
@@ -400,16 +400,16 @@ async def sso_login(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="SSO is not enabled",
         )
-    
+
     if not settings.azure_ad_configured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Azure AD is not configured",
         )
-    
+
     # Get authorization URL
     auth_url = azure_sso.get_auth_url(state=request.state)
-    
+
     return SSOLoginResponse(
         auth_url=auth_url,
         state=request.state,
@@ -424,29 +424,30 @@ async def sso_token_exchange(
     """Exchange Azure AD tokens from frontend for backend tokens."""
     import logging
     import time
+
     logger = logging.getLogger(__name__)
-    
+
     if not settings.FEATURE_SSO or not settings.azure_ad_configured:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="SSO is not available",
         )
-    
+
     try:
         # Extract data from frontend request
         user_info = request.get("userInfo", {})
         email = user_info.get("email")
         name = user_info.get("name", "")
         azure_id = user_info.get("id")
-        
+
         if not email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email not found in user info"
+                detail="Email not found in user info",
             )
-        
+
         logger.info(f"SSO token exchange for user: {email}")
-        
+
         # Create user info dict for get_or_create_user
         azure_user_info = {
             "oid": azure_id,
@@ -454,16 +455,16 @@ async def sso_token_exchange(
             "name": name,
             "email": email,
         }
-        
+
         # Get or create user
         user = await azure_sso.get_or_create_user(azure_user_info, session)
-        
+
         # Create application tokens
         tokens = azure_sso.create_app_tokens(user)
-        
+
         # Clean up old refresh tokens for this user to prevent duplicates
         token_hash = hashlib.sha256(tokens["refresh_token"].encode()).hexdigest()
-        
+
         # Try up to 3 times with a small delay to handle race conditions
         for attempt in range(3):
             try:
@@ -472,12 +473,14 @@ async def sso_token_exchange(
                     select(RefreshToken).where(RefreshToken.token_hash == token_hash)
                 )
                 existing_token = delete_result.scalar_one_or_none()
-                
+
                 if existing_token:
-                    logger.warning(f"Found existing token with same hash (attempt {attempt + 1}), replacing it for user {user.email}")
+                    logger.warning(
+                        f"Found existing token with same hash (attempt {attempt + 1}), replacing it for user {user.email}"
+                    )
                     await session.delete(existing_token)
                     await session.flush()  # Important: flush the deletion before adding new token
-                
+
                 # Also clean up old tokens for this user (keep only last 5)
                 old_tokens_query = (
                     select(RefreshToken)
@@ -489,7 +492,7 @@ async def sso_token_exchange(
                 old_tokens_result = await session.execute(old_tokens_query)
                 for old_token in old_tokens_result.scalars():
                     old_token.revoked_at = datetime.utcnow()
-                
+
                 # Store new refresh token
                 refresh_token = RefreshToken(
                     user_id=user.id,
@@ -505,21 +508,25 @@ async def sso_token_exchange(
                 await session.commit()
                 logger.info(f"SSO login successful for user: {user.email}")
                 break  # Success, exit the retry loop
-                
+
             except Exception as token_error:
                 if "duplicate key value" in str(token_error) and attempt < 2:
-                    logger.warning(f"Token duplicate error on attempt {attempt + 1}, retrying...")
+                    logger.warning(
+                        f"Token duplicate error on attempt {attempt + 1}, retrying..."
+                    )
                     await session.rollback()
                     time.sleep(0.1 * (attempt + 1))  # Small delay before retry
                     # Generate a new token to avoid duplicates
                     tokens = azure_sso.create_app_tokens(user)
-                    token_hash = hashlib.sha256(tokens["refresh_token"].encode()).hexdigest()
+                    token_hash = hashlib.sha256(
+                        tokens["refresh_token"].encode()
+                    ).hexdigest()
                 else:
                     raise token_error
-        
+
         # Load user relationships for response
         await session.refresh(user, attribute_names=["roles", "person", "organization"])
-        
+
         # Prepare user info
         user_info = {
             "id": str(user.id),
@@ -529,14 +536,14 @@ async def sso_token_exchange(
             "roles": [role.role for role in user.roles],
             "person_id": str(user.person_id) if user.person_id else None,
         }
-        
+
         return SSOTokenResponse(
             access_token=tokens["access_token"],
             refresh_token=tokens["refresh_token"],
             token_type=tokens["token_type"],
             user=user_info,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -545,11 +552,11 @@ async def sso_token_exchange(
         if "AADSTS" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Le code d'autorisation a déjà été utilisé ou est expiré. Veuillez réessayer."
+                detail="Le code d'autorisation a déjà été utilisé ou est expiré. Veuillez réessayer.",
             )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"SSO authentication failed: {str(e)}"
+            detail=f"SSO authentication failed: {str(e)}",
         )
 
 
@@ -568,9 +575,13 @@ async def sso_logout(
         .values(revoked_at=datetime.utcnow())
     )
     await session.commit()
-    
+
     # Get logout URL
-    post_logout_uri = str(request.post_logout_redirect_uri) if request.post_logout_redirect_uri else None
+    post_logout_uri = (
+        str(request.post_logout_redirect_uri)
+        if request.post_logout_redirect_uri
+        else None
+    )
     logout_url = azure_sso.get_logout_url(post_logout_redirect_uri=post_logout_uri)
-    
+
     return SSOLogoutResponse(logout_url=logout_url)

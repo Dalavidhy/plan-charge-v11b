@@ -1,6 +1,7 @@
 """Organization schemas."""
 
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, ConfigDict
 
 from app.schemas.base import BaseResponse
@@ -8,9 +9,9 @@ from app.schemas.base import BaseResponse
 
 class OrganizationCreate(BaseModel):
     """Schema for creating organization."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     name: str
     timezone: str = "Europe/Paris"
     default_workweek: Dict[str, float] = {
@@ -26,9 +27,9 @@ class OrganizationCreate(BaseModel):
 
 class OrganizationUpdate(BaseModel):
     """Schema for updating organization."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     name: Optional[str] = None
     timezone: Optional[str] = None
     default_workweek: Optional[Dict[str, float]] = None
@@ -36,7 +37,7 @@ class OrganizationUpdate(BaseModel):
 
 class OrganizationResponse(BaseResponse):
     """Schema for organization response."""
-    
+
     name: str
     timezone: str
     default_workweek: Dict[str, float]

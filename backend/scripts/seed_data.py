@@ -8,15 +8,15 @@ from sqlalchemy import select
 
 from app.database import AsyncSessionLocal, init_db
 from app.models import (
+    Calendar,
     Organization,
-    User,
-    UserOrgRole,
     Person,
     PersonEmail,
+    Project,
     Team,
     TeamMember,
-    Project,
-    Calendar,
+    User,
+    UserOrgRole,
 )
 from app.utils.security import get_password_hash
 
@@ -29,9 +29,9 @@ async def seed_database():
         if result.scalar_one_or_none():
             print("Database already seeded, skipping...")
             return
-        
+
         print("Seeding database...")
-        
+
         # Create organization
         org = Organization(
             name="Demo Company",
@@ -48,16 +48,18 @@ async def seed_database():
         )
         session.add(org)
         await session.flush()
-        
+
         # Create people
         people = []
-        for i, (name, email, role) in enumerate([
-            ("Admin User", "admin@demo.com", "admin"),
-            ("John Manager", "john@demo.com", "manager"),
-            ("Jane Developer", "jane@demo.com", "member"),
-            ("Bob Designer", "bob@demo.com", "member"),
-            ("Alice Analyst", "alice@demo.com", "member"),
-        ]):
+        for i, (name, email, role) in enumerate(
+            [
+                ("Admin User", "admin@demo.com", "admin"),
+                ("John Manager", "john@demo.com", "manager"),
+                ("Jane Developer", "jane@demo.com", "member"),
+                ("Bob Designer", "bob@demo.com", "member"),
+                ("Alice Analyst", "alice@demo.com", "member"),
+            ]
+        ):
             person = Person(
                 org_id=org.id,
                 full_name=name,
@@ -68,7 +70,7 @@ async def seed_database():
             session.add(person)
             await session.flush()
             people.append(person)
-            
+
             # Add email
             person_email = PersonEmail(
                 org_id=org.id,
@@ -80,7 +82,7 @@ async def seed_database():
                 source="manual",
             )
             session.add(person_email)
-            
+
             # Create user account
             user = User(
                 org_id=org.id,
@@ -93,7 +95,7 @@ async def seed_database():
             )
             session.add(user)
             await session.flush()
-            
+
             # Assign role
             user_role = UserOrgRole(
                 org_id=org.id,
@@ -101,7 +103,7 @@ async def seed_database():
                 role=role if i < 2 else "member",
             )
             session.add(user_role)
-        
+
         # Create teams
         teams = []
         for name, lead_idx in [
@@ -118,12 +120,14 @@ async def seed_database():
             session.add(team)
             await session.flush()
             teams.append(team)
-            
+
             # Add team members
             for person_idx in range(1, 5):
-                if (name == "Engineering" and person_idx in [1, 2]) or \
-                   (name == "Design" and person_idx == 3) or \
-                   (name == "Analytics" and person_idx == 4):
+                if (
+                    (name == "Engineering" and person_idx in [1, 2])
+                    or (name == "Design" and person_idx == 3)
+                    or (name == "Analytics" and person_idx == 4)
+                ):
                     team_member = TeamMember(
                         org_id=org.id,
                         team_id=team.id,
@@ -131,15 +135,17 @@ async def seed_database():
                         active_from=datetime.now().date(),
                     )
                     session.add(team_member)
-        
+
         # Create projects
         projects = []
-        for i, (name, key, status, team_idx) in enumerate([
-            ("Website Redesign", "WEB", "active", 1),
-            ("Mobile App", "MOB", "active", 0),
-            ("Data Pipeline", "DATA", "proposed", 2),
-            ("API v2", "API", "active", 0),
-        ]):
+        for i, (name, key, status, team_idx) in enumerate(
+            [
+                ("Website Redesign", "WEB", "active", 1),
+                ("Mobile App", "MOB", "active", 0),
+                ("Data Pipeline", "DATA", "proposed", 2),
+                ("API v2", "API", "active", 0),
+            ]
+        ):
             project = Project(
                 org_id=org.id,
                 name=name,
@@ -152,7 +158,7 @@ async def seed_database():
             )
             session.add(project)
             projects.append(project)
-        
+
         # Create calendar
         calendar = Calendar(
             org_id=org.id,
@@ -168,7 +174,7 @@ async def seed_database():
             },
         )
         session.add(calendar)
-        
+
         # Commit all data
         await session.commit()
         print("Database seeded successfully!")
@@ -178,7 +184,7 @@ async def main():
     """Main function."""
     # Initialize database tables
     await init_db()
-    
+
     # Seed data
     await seed_database()
 

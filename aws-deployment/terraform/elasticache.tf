@@ -37,18 +37,18 @@ resource "aws_elasticache_cluster" "redis" {
   num_cache_nodes     = 1
   parameter_group_name = aws_elasticache_parameter_group.redis.name
   port                = 6379
-  
+
   # Network
   subnet_group_name   = aws_elasticache_subnet_group.redis.name
   security_group_ids  = [aws_security_group.redis.id]
-  
+
   # Maintenance
   maintenance_window = "sun:05:00-sun:06:00"
-  
+
   # Snapshot (pour sauvegardes)
   snapshot_retention_limit = 3
   snapshot_window         = "02:00-03:00"
-  
+
   # Logs
   log_delivery_configuration {
     destination      = aws_cloudwatch_log_group.redis_slow.name

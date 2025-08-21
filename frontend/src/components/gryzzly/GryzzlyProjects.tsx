@@ -192,8 +192,8 @@ export default function GryzzlyProjects() {
                           <div className="space-y-1">
                             <div className="text-sm">{project.budget_hours}h</div>
                             {budget && (
-                              <Progress 
-                                value={budget.percentage} 
+                              <Progress
+                                value={budget.percentage}
                                 className="h-1 w-20"
                               />
                             )}

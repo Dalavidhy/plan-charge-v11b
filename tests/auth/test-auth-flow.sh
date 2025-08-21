@@ -73,11 +73,11 @@ RESPONSE_BODY=$(echo "$LOGIN_RESPONSE" | head -n -1)
 
 if [ "$HTTP_CODE" = "200" ]; then
     print_result 0 "User login successful"
-    
+
     # Extract tokens
     ACCESS_TOKEN=$(echo "$RESPONSE_BODY" | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])" 2>/dev/null)
     REFRESH_TOKEN=$(echo "$RESPONSE_BODY" | python3 -c "import sys, json; print(json.load(sys.stdin)['refresh_token'])" 2>/dev/null)
-    
+
     if [ -n "$ACCESS_TOKEN" ] && [ -n "$REFRESH_TOKEN" ]; then
         echo "Access Token: ${ACCESS_TOKEN:0:50}..."
         echo "Refresh Token: ${REFRESH_TOKEN:0:50}..."

@@ -63,17 +63,17 @@ if [ "$APP_COUNT" -eq "0" ]; then
 else
     print_message $YELLOW "Found $APP_COUNT app registration(s):"
     echo $APPS | jq -r '.[] | "  • \(.name) (ID: \(.id))"'
-    
+
     echo ""
     read -p "Do you want to delete ALL these app registrations? (y/n): " -n 1 -r
     echo
-    
+
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo $APPS | jq -r '.[].id' | while read APP_ID; do
             print_message $YELLOW "Deleting app: $APP_ID"
             az ad app delete --id "$APP_ID"
             print_message $GREEN "✓ Deleted app: $APP_ID"
-            
+
             # Also try to delete service principal if exists
             SP_ID=$(az ad sp list --filter "appId eq '$APP_ID'" --query "[0].id" -o tsv 2>/dev/null || echo "")
             if [ ! -z "$SP_ID" ]; then
@@ -104,7 +104,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         sed -i.bak '/^# Azure AD Configuration/d' backend/.env
         print_message $GREEN "✓ Cleaned backend/.env"
     fi
-    
+
     # Clean frontend .env files
     for ENV_FILE in frontend/.env frontend/.env.local; do
         if [ -f "$ENV_FILE" ]; then
@@ -114,7 +114,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             print_message $GREEN "✓ Cleaned $ENV_FILE"
         fi
     done
-    
+
     # Remove config file
     if [ -f "azure-sso-config.json" ]; then
         rm azure-sso-config.json

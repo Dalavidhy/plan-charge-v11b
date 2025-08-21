@@ -59,7 +59,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
   rule {
     id     = "delete_old_logs"
     status = "Enabled"
-    
+
     filter {
       prefix = "alb-logs/"
     }
@@ -176,13 +176,13 @@ locals {
 #   protocol          = "HTTPS"
 #   ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
 #   certificate_arn   = local.alb_certificate_arn
-# 
+#
 #   # Action par défaut : rediriger vers le frontend
 #   default_action {
 #     type             = "forward"
 #     target_group_arn = aws_lb_target_group.frontend.arn
 #   }
-# 
+#
 #   tags = local.common_tags
 # }
 

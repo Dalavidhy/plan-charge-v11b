@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { accounts, inProgress, instance } = useMsal();
   const msalIsAuthenticated = useIsAuthenticated();
-  
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -35,14 +35,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkAuth = async () => {
       logger.debug("🔍 AuthContext checkAuth() - inProgress:", inProgress, "msalAuth:", msalIsAuthenticated, "accounts:", accounts.length);
-      
+
       // If MSAL is still in progress, wait
       if (inProgress !== "none") {
         logger.debug("⏳ AuthContext: MSAL in progress, waiting...");
         setIsLoading(true);
         return;
       }
-      
+
       // If MSAL says not authenticated, don't check backend tokens
       if (!msalIsAuthenticated || accounts.length === 0) {
         logger.debug("🚫 AuthContext: MSAL not authenticated, clearing state");
@@ -52,11 +52,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsLoading(false);
         return;
       }
-      
+
       // MSAL is authenticated, check if we have backend tokens
       const token = localStorage.getItem('access_token');
       logger.debug("🔍 AuthContext: Has backend token:", !!token);
-      
+
       if (token) {
         try {
           logger.debug("🔍 AuthContext: Calling getCurrentUser() with token");
@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setIsLoading(false);
     };
-    
+
     checkAuth();
   }, [msalIsAuthenticated, accounts, inProgress]);
 
@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserEmail(undefined);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      
+
       // Also logout from MSAL if available
       try {
         if (accounts.length > 0) {
@@ -133,13 +133,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const value = useMemo(
-    () => ({ 
-      isAuthenticated, 
+    () => ({
+      isAuthenticated,
       isLoading,
       user,
-      logout, 
-      userEmail 
-    }), 
+      logout,
+      userEmail
+    }),
     [isAuthenticated, isLoading, user, userEmail]
   );
 

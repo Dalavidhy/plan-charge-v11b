@@ -80,7 +80,7 @@ export const loginRequest = {
 export const silentRequest = {
   scopes: [
     "openid",
-    "profile", 
+    "profile",
     "email",
     "User.Read",
   ],

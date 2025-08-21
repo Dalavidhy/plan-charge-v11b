@@ -137,7 +137,7 @@ PGPASSWORD="4Se%3CvRRq5KF9r)ms" psql \
 
 if [ $? -eq 0 ]; then
     echo "✅ SQL executed successfully!"
-    
+
     # Verify the fix
     echo "🔍 Verifying organizations..."
     PGPASSWORD="4Se%3CvRRq5KF9r)ms" psql \
@@ -145,7 +145,7 @@ if [ $? -eq 0 ]; then
         -U plancharge \
         -d plancharge \
         -c "SELECT id, name FROM organizations ORDER BY name;"
-    
+
     echo "🎉 SSO FIX COMPLETED!"
     echo "✅ Default Organization added to database"
     echo "🚀 Test login at: https://plan-de-charge.aws.nda-partners.com"

@@ -6,28 +6,28 @@
 -- This adds the expected organization so SSO authentication can work.
 
 -- Add Default Organization that backend expects
-INSERT INTO organizations (id, name, created_at, updated_at, deleted_at) 
+INSERT INTO organizations (id, name, created_at, updated_at, deleted_at)
 VALUES (
-    '00000000-0000-0000-0000-000000000002', 
+    '00000000-0000-0000-0000-000000000002',
     'Default Organization',
     NOW(),
     NOW(),
     NULL
 )
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     updated_at = NOW();
 
 -- Verify both organizations exist
-SELECT id, name, created_at 
-FROM organizations 
+SELECT id, name, created_at
+FROM organizations
 WHERE name IN ('NDA Partners', 'Default Organization')
 ORDER BY created_at;
 
 -- ============================================================================
 -- INSTRUCTIONS:
 -- ============================================================================
--- 
+--
 -- Execute this SQL using one of these methods:
 --
 -- 1. AWS RDS Query Editor:
@@ -45,7 +45,7 @@ ORDER BY created_at;
 -- EXPECTED RESULT:
 -- ============================================================================
 -- After executing this SQL:
--- - Database will have both "NDA Partners" and "Default Organization" 
+-- - Database will have both "NDA Partners" and "Default Organization"
 -- - Backend SSO code will find "Default Organization" and work correctly
 -- - Users can successfully authenticate via Azure AD
 -- - No 500 Internal Server Error during SSO token exchange

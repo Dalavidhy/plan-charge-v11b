@@ -49,11 +49,11 @@ CODE=$(echo $RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 
 if [ "$CODE" = "200" ]; then
     echo "✅ Login successful (HTTP $CODE)"
-    
+
     # Extract tokens using python
     ACCESS_TOKEN=$(echo "$BODY" | python3 -c "import sys, json; data = json.loads(sys.stdin.read()); print(data.get('access_token', ''))" 2>/dev/null || echo "")
     REFRESH_TOKEN=$(echo "$BODY" | python3 -c "import sys, json; data = json.loads(sys.stdin.read()); print(data.get('refresh_token', ''))" 2>/dev/null || echo "")
-    
+
     if [ -n "$ACCESS_TOKEN" ]; then
         echo "Access Token received: ${ACCESS_TOKEN:0:20}..."
     fi

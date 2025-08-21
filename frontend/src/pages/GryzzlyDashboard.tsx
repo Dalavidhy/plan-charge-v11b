@@ -65,8 +65,8 @@ export default function GryzzlyDashboard() {
       setSyncStatus(statusData);
       logger.debug('✅ GryzzlyDashboard: Data loaded successfully', { statsData, statusData });
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || 
-                          error?.response?.data?.message || 
+      const errorMessage = error?.response?.data?.detail ||
+                          error?.response?.data?.message ||
                           error?.message ||
                           'Erreur lors du chargement des données Gryzzly';
       toast.error(errorMessage);
@@ -99,7 +99,7 @@ export default function GryzzlyDashboard() {
     try {
       setSyncing(true);
       let result;
-      
+
       switch (type) {
         case 'collaborators':
           result = await gryzzlyService.syncCollaborators();
@@ -117,9 +117,9 @@ export default function GryzzlyDashboard() {
           result = await gryzzlyService.syncFull();
           break;
       }
-      
+
       toast.success(result.message);
-      
+
       // Reload data after a delay to allow sync to complete
       setTimeout(() => {
         loadData();

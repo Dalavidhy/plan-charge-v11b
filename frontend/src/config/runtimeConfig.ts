@@ -28,13 +28,13 @@ function getConfigValue(key: keyof RuntimeConfig): string {
   if (window.ENV_CONFIG && window.ENV_CONFIG[key]) {
     return window.ENV_CONFIG[key];
   }
-  
+
   // Fall back to build-time environment (development)
   const buildTimeValue = import.meta.env[key] as string;
   if (buildTimeValue) {
     return buildTimeValue;
   }
-  
+
   // Handle specific defaults
   switch (key) {
     case 'VITE_API_URL':
@@ -56,30 +56,30 @@ export const runtimeConfig = {
   get azureClientId(): string {
     return getConfigValue('VITE_AZURE_AD_CLIENT_ID');
   },
-  
+
   get azureTenantId(): string {
     return getConfigValue('VITE_AZURE_AD_TENANT_ID');
   },
-  
+
   get azureRedirectUri(): string {
     return getConfigValue('VITE_AZURE_AD_REDIRECT_URI');
   },
-  
+
   // API Configuration
   get apiUrl(): string {
     return getConfigValue('VITE_API_URL');
   },
-  
+
   // Gryzzly Configuration
   get gryzzlyUseMock(): boolean {
     return getConfigValue('VITE_GRYZZLY_USE_MOCK') === 'true';
   },
-  
+
   // Validation
   get isConfigured(): boolean {
     return !!(this.azureClientId && this.azureTenantId);
   },
-  
+
   // Debug info
   get debugInfo(): Record<string, any> {
     return {

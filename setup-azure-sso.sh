@@ -36,7 +36,7 @@ command_exists() {
 # Function to install Azure CLI if not present
 install_azure_cli() {
     print_message $YELLOW "Azure CLI not found. Installing..."
-    
+
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS
         if command_exists brew; then
@@ -127,30 +127,30 @@ fi
 # ============================================================================
 if [ -z "$CLIENT_ID" ]; then
     print_message $BLUE "\n=== Step 4: Creating App Registration ==="
-    
+
     # Create the app registration with SPA platform
     print_message $YELLOW "Creating new app registration..."
-    
+
     # Create app with basic configuration
     APP_CREATION_RESULT=$(az ad app create \
         --display-name "$APP_NAME" \
         --sign-in-audience "AzureADMyOrg" \
         --enable-access-token-issuance false \
         --enable-id-token-issuance false)
-    
+
     CLIENT_ID=$(echo $APP_CREATION_RESULT | jq -r '.appId')
     OBJECT_ID=$(echo $APP_CREATION_RESULT | jq -r '.id')
-    
+
     print_message $GREEN "✓ Created app registration"
     print_message $GREEN "  Client ID: $CLIENT_ID"
     print_message $GREEN "  Object ID: $OBJECT_ID"
-    
+
     # Wait for app to be created
     sleep 5
-    
+
     # Configure SPA platform with redirect URIs using Microsoft Graph API
     print_message $YELLOW "Configuring SPA platform..."
-    
+
     # Use az rest to call Microsoft Graph API directly
     # This method works with all versions of Azure CLI
     SPA_CONFIG='{
@@ -167,10 +167,10 @@ if [ -z "$CLIENT_ID" ]; then
             }
         }
     }'
-    
+
     # Update using Microsoft Graph API
     print_message $YELLOW "Updating app configuration via Microsoft Graph..."
-    
+
     # Try using az rest command
     if az rest --method PATCH \
         --uri "https://graph.microsoft.com/v1.0/applications/$OBJECT_ID" \
@@ -180,16 +180,16 @@ if [ -z "$CLIENT_ID" ]; then
     else
         # Fallback method: use az ad app update with manifest
         print_message $YELLOW "Trying alternative method..."
-        
+
         # Get current manifest
         CURRENT_MANIFEST=$(az ad app show --id $CLIENT_ID)
-        
+
         # Create updated manifest with SPA configuration
         UPDATED_MANIFEST=$(echo $CURRENT_MANIFEST | jq '.spa.redirectUris = ["'$REDIRECT_URI'"]')
-        
+
         # Save to temp file
         echo "$UPDATED_MANIFEST" > /tmp/app-manifest.json
-        
+
         # Update app with new manifest
         az ad app update --id $CLIENT_ID --set spa.redirectUris="[\"$REDIRECT_URI\"]" 2>/dev/null || {
             # Last resort: manual instruction
@@ -199,7 +199,7 @@ if [ -z "$CLIENT_ID" ]; then
             print_message $YELLOW "  3. Add redirect URI: $REDIRECT_URI"
             print_message $YELLOW "  4. Save the changes"
         }
-        
+
         rm -f /tmp/app-manifest.json
     fi
 fi
@@ -300,20 +300,20 @@ print_message $BLUE "\n=== Step 9: Generating Environment Files ==="
 BACKEND_ENV_FILE="backend/.env"
 if [ -f "$BACKEND_ENV_FILE" ]; then
     print_message $YELLOW "Updating backend .env file..."
-    
+
     # Update or add Azure AD configuration
     sed -i.bak '/^AZURE_AD_TENANT_ID=/d' $BACKEND_ENV_FILE
     sed -i.bak '/^AZURE_AD_CLIENT_ID=/d' $BACKEND_ENV_FILE
     sed -i.bak '/^AZURE_AD_CLIENT_SECRET=/d' $BACKEND_ENV_FILE
     sed -i.bak '/^AZURE_AD_REDIRECT_URI=/d' $BACKEND_ENV_FILE
-    
+
     echo "" >> $BACKEND_ENV_FILE
     echo "# Azure AD Configuration (Updated by setup script)" >> $BACKEND_ENV_FILE
     echo "AZURE_AD_TENANT_ID=$TENANT_ID" >> $BACKEND_ENV_FILE
     echo "AZURE_AD_CLIENT_ID=$CLIENT_ID" >> $BACKEND_ENV_FILE
     echo "AZURE_AD_CLIENT_SECRET=" >> $BACKEND_ENV_FILE  # Empty for SPA
     echo "AZURE_AD_REDIRECT_URI=$REDIRECT_URI" >> $BACKEND_ENV_FILE
-    
+
     print_message $GREEN "✓ Updated backend/.env"
 else
     print_message $YELLOW "⚠ backend/.env not found. Please create it manually."
@@ -327,18 +327,18 @@ fi
 
 if [ -f "$FRONTEND_ENV_FILE" ]; then
     print_message $YELLOW "Updating frontend .env file..."
-    
+
     # Update or add Azure AD configuration
     sed -i.bak '/^VITE_AZURE_AD_TENANT_ID=/d' $FRONTEND_ENV_FILE
     sed -i.bak '/^VITE_AZURE_AD_CLIENT_ID=/d' $FRONTEND_ENV_FILE
     sed -i.bak '/^VITE_AZURE_AD_REDIRECT_URI=/d' $FRONTEND_ENV_FILE
-    
+
     echo "" >> $FRONTEND_ENV_FILE
     echo "# Azure AD Configuration (Updated by setup script)" >> $FRONTEND_ENV_FILE
     echo "VITE_AZURE_AD_TENANT_ID=$TENANT_ID" >> $FRONTEND_ENV_FILE
     echo "VITE_AZURE_AD_CLIENT_ID=$CLIENT_ID" >> $FRONTEND_ENV_FILE
     echo "VITE_AZURE_AD_REDIRECT_URI=$REDIRECT_URI" >> $FRONTEND_ENV_FILE
-    
+
     print_message $GREEN "✓ Updated $FRONTEND_ENV_FILE"
 else
     # Create new frontend .env file

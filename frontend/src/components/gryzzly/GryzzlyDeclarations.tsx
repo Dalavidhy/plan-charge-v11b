@@ -33,10 +33,10 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
-  Loader2, 
-  Search, 
-  Clock, 
+import {
+  Loader2,
+  Search,
+  Clock,
   CalendarIcon,
   CheckCircle,
   XCircle,
@@ -45,10 +45,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
-import gryzzlyService, { 
-  GryzzlyDeclaration, 
-  GryzzlyCollaborator, 
-  GryzzlyProject 
+import gryzzlyService, {
+  GryzzlyDeclaration,
+  GryzzlyCollaborator,
+  GryzzlyProject
 } from '@/services/gryzzly.service';
 
 export default function GryzzlyDeclarations() {
@@ -70,7 +70,7 @@ export default function GryzzlyDeclarations() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       // Load collaborators and projects for filters
       const [collaboratorsData, projectsData] = await Promise.all([
         gryzzlyService.getCollaborators({ limit: 500 }),
@@ -78,32 +78,32 @@ export default function GryzzlyDeclarations() {
       ]);
       setCollaborators(collaboratorsData);
       setProjects(projectsData);
-      
+
       // Load declarations
       const params: any = {
         limit: 500,
       };
-      
+
       if (selectedCollaboratorId !== 'all') {
         params.collaborator_id = selectedCollaboratorId;
       }
-      
+
       if (selectedProjectId !== 'all') {
         params.project_id = selectedProjectId;
       }
-      
+
       if (selectedStatus !== 'all') {
         params.status = selectedStatus;
       }
-      
+
       if (startDate) {
         params.start_date = format(startDate, 'yyyy-MM-dd');
       }
-      
+
       if (endDate) {
         params.end_date = format(endDate, 'yyyy-MM-dd');
       }
-      
+
       const declarationsData = await gryzzlyService.getDeclarations(params);
       setDeclarations(declarationsData);
     } catch (error) {
@@ -124,7 +124,7 @@ export default function GryzzlyDeclarations() {
 
   const getCollaboratorName = (collaboratorId: string) => {
     const collaborator = collaborators.find(c => c.id === collaboratorId);
-    return collaborator 
+    return collaborator
       ? `${collaborator.first_name} ${collaborator.last_name}`.trim() || collaborator.email
       : 'Collaborateur inconnu';
   };
@@ -160,14 +160,14 @@ export default function GryzzlyDeclarations() {
       'submitted': 'outline',
       'draft': 'default'
     };
-    
+
     const labels: Record<string, string> = {
       'approved': 'Approuvé',
       'rejected': 'Rejeté',
       'submitted': 'Soumis',
       'draft': 'Brouillon'
     };
-    
+
     return (
       <Badge variant={variants[status] || 'default'}>
         {labels[status] || status}
@@ -214,7 +214,7 @@ export default function GryzzlyDeclarations() {
               className="pl-8"
             />
           </div>
-          
+
           <Select value={selectedCollaboratorId} onValueChange={setSelectedCollaboratorId}>
             <SelectTrigger>
               <SelectValue placeholder="Tous les collaborateurs" />
@@ -228,7 +228,7 @@ export default function GryzzlyDeclarations() {
               ))}
             </SelectContent>
           </Select>
-          
+
           <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
             <SelectTrigger>
               <SelectValue placeholder="Tous les projets" />
@@ -242,7 +242,7 @@ export default function GryzzlyDeclarations() {
               ))}
             </SelectContent>
           </Select>
-          
+
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger>
               <SelectValue placeholder="Tous les statuts" />
@@ -255,7 +255,7 @@ export default function GryzzlyDeclarations() {
               <SelectItem value="rejected">Rejeté</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -278,7 +278,7 @@ export default function GryzzlyDeclarations() {
               />
             </PopoverContent>
           </Popover>
-          
+
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -301,7 +301,7 @@ export default function GryzzlyDeclarations() {
               />
             </PopoverContent>
           </Popover>
-          
+
           <Button
             variant="outline"
             onClick={loadData}

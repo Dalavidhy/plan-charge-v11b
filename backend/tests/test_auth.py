@@ -77,7 +77,7 @@ async def test_refresh_token(client: AsyncClient, test_user: User):
     )
     assert login_response.status_code == 200
     refresh_token = login_response.json()["refresh_token"]
-    
+
     # Refresh token
     response = await client.post(
         "/api/v1/auth/refresh",
@@ -102,7 +102,7 @@ async def test_change_password(client: AsyncClient, auth_headers: dict):
         headers=auth_headers,
     )
     assert response.status_code == 204
-    
+
     # Try logging in with new password
     login_response = await client.post(
         "/api/v1/auth/login",

@@ -105,20 +105,20 @@ export default function Collaborateurs() {
 
   const saveMatricule = async (id: string) => {
     const newMatricule = matriculeValues[id]?.trim() || '';
-    
+
     try {
       setUpdating(id);
       await collaboratorsService.updateCollaborator(id, { matricule: newMatricule });
-      
+
       // Update local state
       dispatch({ type: 'UPDATE_MATRICULE', id, matricule: newMatricule });
-      
+
       // Clean up editing state
       setEditingMatricule(null);
       const newValues = { ...matriculeValues };
       delete newValues[id];
       setMatriculeValues(newValues);
-      
+
       toast({
         title: "Succès",
         description: "Matricule mis à jour",
@@ -145,7 +145,7 @@ export default function Collaborateurs() {
 
   const handleExportCSV = () => {
     const date = new Date().toISOString().split('T')[0];
-    const dataToExport = showOnlyActive 
+    const dataToExport = showOnlyActive
       ? state.collaborateurs.filter(c => c.actif)
       : state.collaborateurs;
     collaboratorsService.downloadCSV(dataToExport, `collaborateurs_${date}.csv`);
@@ -156,7 +156,7 @@ export default function Collaborateurs() {
   };
 
   // Filter collaborators based on active status
-  const displayedCollaborateurs = showOnlyActive 
+  const displayedCollaborateurs = showOnlyActive
     ? state.collaborateurs.filter(c => c.actif)
     : state.collaborateurs;
 
@@ -196,8 +196,8 @@ export default function Collaborateurs() {
           </div>
         </div>
         <div className="text-sm text-muted-foreground">
-          {displayedCollaborateurs.length} affiché{displayedCollaborateurs.length > 1 ? 's' : ''} / {state.collaborateurs.length} total • 
-          {state.collaborateurs.filter(c => c.actif).length} actif{state.collaborateurs.filter(c => c.actif).length > 1 ? 's' : ''} • 
+          {displayedCollaborateurs.length} affiché{displayedCollaborateurs.length > 1 ? 's' : ''} / {state.collaborateurs.length} total •
+          {state.collaborateurs.filter(c => c.actif).length} actif{state.collaborateurs.filter(c => c.actif).length > 1 ? 's' : ''} •
           {state.collaborateurs.filter(c => c.eligibleTR).length} éligible{state.collaborateurs.filter(c => c.eligibleTR).length > 1 ? 's' : ''} TR
         </div>
       </div>
@@ -230,8 +230,8 @@ export default function Collaborateurs() {
               {displayedCollaborateurs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {showOnlyActive && state.collaborateurs.length > 0 
-                      ? "Aucun collaborateur actif trouvé" 
+                    {showOnlyActive && state.collaborateurs.length > 0
+                      ? "Aucun collaborateur actif trouvé"
                       : "Aucun collaborateur trouvé"}
                   </td>
                 </tr>
@@ -299,18 +299,18 @@ export default function Collaborateurs() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={c.actif} 
+                      <input
+                        type="checkbox"
+                        checked={c.actif}
                         disabled={updating === c.id}
                         onChange={() => handleToggleActif(c.id, c.actif)}
                         className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={c.eligibleTR} 
+                      <input
+                        type="checkbox"
+                        checked={c.eligibleTR}
                         disabled={updating === c.id || !c.actif}
                         onChange={() => handleToggleEligible(c.id, c.eligibleTR)}
                         className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -324,9 +324,9 @@ export default function Collaborateurs() {
           </table>
         </div>
       )}
-      
+
       <p className="text-xs text-muted-foreground mt-3">
-        Les collaborateurs inactifs n'apparaissent pas dans le plan de charge. 
+        Les collaborateurs inactifs n'apparaissent pas dans le plan de charge.
         L'éligibilité TR est basée sur les contrats actifs dans Payfit.
       </p>
     </AppLayout>

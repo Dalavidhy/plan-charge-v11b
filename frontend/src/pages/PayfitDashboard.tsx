@@ -66,8 +66,8 @@ export default function PayfitDashboard() {
       setSyncStatus(statusData);
       logger.debug('✅ PayfitDashboard: Data loaded successfully', { statsData, statusData });
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || 
-                          error?.response?.data?.message || 
+      const errorMessage = error?.response?.data?.detail ||
+                          error?.response?.data?.message ||
                           error?.message ||
                           'Erreur lors du chargement des données Payfit';
       toast.error(errorMessage);
@@ -100,7 +100,7 @@ export default function PayfitDashboard() {
     try {
       setSyncing(true);
       let result;
-      
+
       switch (type) {
         case 'employees':
           result = await payfitService.syncEmployees();
@@ -115,16 +115,16 @@ export default function PayfitDashboard() {
           result = await payfitService.syncFull();
           break;
       }
-      
+
       toast.success(result.message);
-      
+
       // Reload data after a delay to allow sync to complete
       setTimeout(() => {
         loadData();
       }, 3000);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.detail || 
-                          error?.response?.data?.message || 
+      const errorMessage = error?.response?.data?.detail ||
+                          error?.response?.data?.message ||
                           error?.message ||
                           `Erreur lors de la synchronisation ${type}`;
       toast.error(errorMessage);

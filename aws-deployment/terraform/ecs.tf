@@ -121,7 +121,7 @@ resource "aws_ecs_task_definition" "backend" {
     {
       name  = "backend"
       image = var.backend_image_url
-      
+
       portMappings = [
         {
           containerPort = 8000
@@ -216,7 +216,7 @@ resource "aws_ecs_task_definition" "frontend" {
     {
       name  = "frontend"
       image = var.frontend_image_url
-      
+
       portMappings = [
         {
           containerPort = 80
@@ -288,7 +288,7 @@ resource "aws_ecs_task_definition" "celery" {
     {
       name  = "celery-worker"
       image = var.celery_image_url
-      
+
       command = ["celery", "-A", "app.tasks", "worker", "--loglevel=info"]
 
       environment = [
@@ -333,7 +333,7 @@ resource "aws_ecs_task_definition" "celery" {
     {
       name  = "celery-beat"
       image = var.celery_image_url
-      
+
       command = ["celery", "-A", "app.tasks", "beat", "--loglevel=info"]
 
       environment = [

@@ -44,21 +44,21 @@ export default function GryzzlyTasks() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       // Load projects for the filter
       const projectsData = await gryzzlyService.getProjects({ limit: 500 });
       setProjects(projectsData);
-      
+
       // Load tasks
       const params: any = {
         active_only: activeOnly,
         limit: 500,
       };
-      
+
       if (selectedProjectId !== 'all') {
         params.project_id = selectedProjectId;
       }
-      
+
       const tasksData = await gryzzlyService.getTasks(params);
       setTasks(tasksData);
     } catch (error) {

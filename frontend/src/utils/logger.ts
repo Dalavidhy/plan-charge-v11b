@@ -25,7 +25,7 @@ class Logger {
     let isDev = false;
     let enableLogging = false;
     let logLevel: LogLevel = 'info';
-    
+
     try {
       // This will only work in development
       isDev = import.meta.env.DEV === true;
@@ -35,7 +35,7 @@ class Logger {
       // In production, import.meta.env doesn't exist, so we catch the error
       // and use default values (logging disabled)
     }
-    
+
     this.config = {
       enabled: isDev || enableLogging,
       level: logLevel,

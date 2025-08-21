@@ -27,14 +27,14 @@ psql << 'EOF'
 BEGIN;
 
 -- Créer backup
-CREATE TEMP TABLE gryzzly_collaborators_backup AS 
-SELECT id, gryzzly_id, email, first_name, last_name, matricule, updated_at 
+CREATE TEMP TABLE gryzzly_collaborators_backup AS
+SELECT id, gryzzly_id, email, first_name, last_name, matricule, updated_at
 FROM gryzzly_collaborators;
 
 -- Afficher état initial
-SELECT 'ETAT INITIAL:' as info, 
-       COUNT(*) as total, 
-       COUNT(matricule) as avec_matricule 
+SELECT 'ETAT INITIAL:' as info,
+       COUNT(*) as total,
+       COUNT(matricule) as avec_matricule
 FROM gryzzly_collaborators;
 
 -- Mise à jour des matricules
@@ -55,9 +55,9 @@ UPDATE gryzzly_collaborators SET matricule = '8', updated_at = NOW() WHERE LOWER
 UPDATE gryzzly_collaborators SET matricule = '3', updated_at = NOW() WHERE LOWER(email) = 'maria.zavlyanova@nda-partners.com';
 
 -- Afficher état final
-SELECT 'ETAT FINAL:' as info, 
-       COUNT(*) as total, 
-       COUNT(matricule) as avec_matricule 
+SELECT 'ETAT FINAL:' as info,
+       COUNT(*) as total,
+       COUNT(matricule) as avec_matricule
 FROM gryzzly_collaborators;
 
 -- Afficher les matricules mis à jour
@@ -69,15 +69,15 @@ ORDER BY CAST(matricule AS INTEGER);
 
 -- Vérifier les doublons
 SELECT 'VERIFICATION DOUBLONS:' as info;
-SELECT CASE 
+SELECT CASE
     WHEN COUNT(*) = 0 THEN 'OK - Pas de doublons'
     ELSE 'ERREUR - Doublons detectes'
 END as resultat
 FROM (
-    SELECT matricule, COUNT(*) 
-    FROM gryzzly_collaborators 
-    WHERE matricule IS NOT NULL 
-    GROUP BY matricule 
+    SELECT matricule, COUNT(*)
+    FROM gryzzly_collaborators
+    WHERE matricule IS NOT NULL
+    GROUP BY matricule
     HAVING COUNT(*) > 1
 ) as doublons;
 

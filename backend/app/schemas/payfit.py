@@ -1,10 +1,12 @@
 """
 Pydantic schemas for Payfit integration
 """
-from typing import Optional, Dict, Any, List
-from datetime import datetime, date
-from pydantic import BaseModel, Field
+
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
 from uuid import UUID
+
+from pydantic import BaseModel, Field
 
 
 # Employee schemas
@@ -31,7 +33,7 @@ class PayfitEmployeeResponse(PayfitEmployeeBase):
     last_synced_at: datetime
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         orm_mode = True
 
@@ -57,7 +59,7 @@ class PayfitContractResponse(PayfitContractBase):
     last_synced_at: datetime
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         orm_mode = True
 
@@ -84,7 +86,7 @@ class PayfitAbsenceResponse(PayfitAbsenceBase):
     last_synced_at: datetime
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         orm_mode = True
 
@@ -104,7 +106,7 @@ class PayfitSyncLogResponse(BaseModel):
     error_message: Optional[str] = None
     triggered_by: Optional[str] = None
     created_at: datetime
-    
+
     class Config:
         orm_mode = True
 

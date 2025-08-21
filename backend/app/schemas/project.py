@@ -1,7 +1,7 @@
 """Project and Task schemas."""
 
-from typing import Optional, List
 from datetime import date
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -11,9 +11,9 @@ from app.schemas.base import BaseResponse
 
 class ProjectCreate(BaseModel):
     """Schema for creating project."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     name: str
     code: str
     description: Optional[str] = None
@@ -25,9 +25,9 @@ class ProjectCreate(BaseModel):
 
 class ProjectUpdate(BaseModel):
     """Schema for updating project."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     name: Optional[str] = None
     code: Optional[str] = None
     description: Optional[str] = None
@@ -39,7 +39,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(BaseResponse):
     """Schema for project response."""
-    
+
     name: str
     code: str
     description: Optional[str]
@@ -51,9 +51,9 @@ class ProjectResponse(BaseResponse):
 
 class TaskCreate(BaseModel):
     """Schema for creating task."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     title: str
     description: Optional[str] = None
     project_id: UUID
@@ -67,9 +67,9 @@ class TaskCreate(BaseModel):
 
 class TaskUpdate(BaseModel):
     """Schema for updating task."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     title: Optional[str] = None
     description: Optional[str] = None
     project_id: Optional[UUID] = None
@@ -85,7 +85,7 @@ class TaskUpdate(BaseModel):
 
 class TaskResponse(BaseResponse):
     """Schema for task response."""
-    
+
     title: str
     description: Optional[str]
     project_id: UUID

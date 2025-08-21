@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import __version__
 from app.api.v1 import api_router
 from app.config import settings
-from app.database import init_db, close_db
+from app.database import close_db, init_db
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.rate_limiting import RateLimitMiddleware
 from app.middleware.request_id import RequestIDMiddleware
@@ -30,15 +30,15 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     logger.info("Starting Plan Charge v9 backend...")
-    
+
     # Initialize database
     if settings.is_development:
         await init_db()
-    
+
     # Initialize other services here (Redis, etc.)
-    
+
     yield
-    
+
     # Cleanup
     logger.info("Shutting down Plan Charge v9 backend...")
     await close_db()
@@ -81,7 +81,9 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Exception handlers
 @app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
+) -> JSONResponse:
     """Handle HTTP exceptions."""
     return JSONResponse(
         status_code=exc.status_code,
@@ -95,7 +97,9 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """Handle validation errors."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -113,7 +117,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle general exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     if settings.is_development:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -124,7 +128,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
                 }
             },
         )
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -153,7 +157,7 @@ async def readiness_check() -> Dict[str, Any]:
     # Check database connection
     # Check Redis connection
     # Check other critical dependencies
-    
+
     return {
         "status": "ready",
         "version": __version__,

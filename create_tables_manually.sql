@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS ix_users_org_id ON users(org_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_org_email ON users(org_id, email) WHERE deleted_at IS NULL;
 
 -- Insert default organization
-INSERT INTO organizations (id, name) 
+INSERT INTO organizations (id, name)
 VALUES ('00000000-0000-0000-0000-000000000001', 'NDA Partners')
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
 
@@ -51,18 +51,18 @@ CREATE TABLE IF NOT EXISTS alembic_version (
 );
 
 -- Insert current migration version
-INSERT INTO alembic_version (version_num) 
-VALUES ('74b7c8174dd8') 
+INSERT INTO alembic_version (version_num)
+VALUES ('74b7c8174dd8')
 ON CONFLICT (version_num) DO NOTHING;
 
 -- Verify tables were created
-SELECT 
+SELECT
     table_name,
     column_name,
     data_type,
     is_nullable
-FROM information_schema.columns 
-WHERE table_schema = 'public' 
+FROM information_schema.columns
+WHERE table_schema = 'public'
   AND table_name IN ('organizations', 'users')
 ORDER BY table_name, ordinal_position;
 
@@ -74,7 +74,7 @@ SELECT 'users' as table_name, COUNT(*) as row_count FROM users;
 -- ============================================================================
 -- INSTRUCTIONS FOR EXECUTION:
 -- ============================================================================
--- 
+--
 -- Option 1: AWS RDS Query Editor
 -- 1. Go to AWS Console -> RDS -> Query Editor
 -- 2. Select your PostgreSQL database

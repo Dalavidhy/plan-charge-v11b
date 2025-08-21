@@ -17,10 +17,26 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     environment: production
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run pre-commit hooks
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
+        continue-on-error: false
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -44,18 +60,18 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           cd backend
-          
+
           # Build the Docker image with fixes
           docker build \
             --platform linux/amd64 \
             --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             --tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
             .
-          
+
           # Push both tags
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
-          
+
           echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Download task definition
@@ -83,13 +99,13 @@ jobs:
       - name: Verify deployment
         run: |
           echo "Deployment completed successfully!"
-          
+
           # Get service status
           aws ecs describe-services \
             --cluster $ECS_CLUSTER \
             --services $ECS_SERVICE \
             --query 'services[0].{serviceName: serviceName, status: status, runningCount: runningCount, desiredCount: desiredCount}'
-          
+
           # Get latest task definition
           TASK_DEF_ARN=$(aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE --query 'services[0].taskDefinition' --output text)
           echo "Latest task definition: $TASK_DEF_ARN"

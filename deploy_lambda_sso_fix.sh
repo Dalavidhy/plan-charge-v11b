@@ -36,13 +36,13 @@ log_error() {
 # Cleanup function
 cleanup() {
     log_info "🧹 Cleaning up..."
-    
+
     # Delete Lambda function
     if aws lambda get-function --function-name "$FUNCTION_NAME" --region "$REGION" &>/dev/null; then
         aws lambda delete-function --function-name "$FUNCTION_NAME" --region "$REGION"
         log_info "Lambda function deleted"
     fi
-    
+
     # Delete IAM role and policy
     if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
         aws iam detach-role-policy --role-name "$ROLE_NAME" --policy-arn "arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):policy/$POLICY_NAME" 2>/dev/null || true
@@ -50,7 +50,7 @@ cleanup() {
         aws iam delete-role --role-name "$ROLE_NAME" 2>/dev/null || true
         log_info "IAM resources deleted"
     fi
-    
+
     # Remove temp files
     rm -rf "$TEMP_DIR"
     log_info "Temporary files removed"
@@ -210,10 +210,10 @@ echo "$RESULT"
 if [ -f response.json ]; then
     echo "📄 Lambda response:"
     cat response.json | jq .
-    
+
     # Check if it was successful
     SUCCESS=$(cat response.json | jq -r '.body | fromjson | .success // false')
-    
+
     if [ "$SUCCESS" = "true" ]; then
         log_info "🎉 SSO FIX SUCCESSFUL!"
         log_info "✅ Default Organization has been added to the database"

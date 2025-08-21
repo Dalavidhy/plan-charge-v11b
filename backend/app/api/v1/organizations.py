@@ -23,10 +23,10 @@ async def list_organizations(
 ):
     """List organizations accessible to the current user."""
     query = select(Organization).where(Organization.deleted_at.is_(None))
-    
+
     # Filter by user's organization
     query = query.where(Organization.id == current_user.org_id)
-    
+
     result = await paginate(session, query, pagination)
     return result
 
@@ -42,10 +42,18 @@ async def create_organization(
     org = Organization(
         name=data["name"],
         timezone=data.get("timezone", "Europe/Paris"),
-        default_workweek=data.get("default_workweek", {
-            "monday": 7, "tuesday": 7, "wednesday": 7, 
-            "thursday": 7, "friday": 7, "saturday": 0, "sunday": 0
-        }),
+        default_workweek=data.get(
+            "default_workweek",
+            {
+                "monday": 7,
+                "tuesday": 7,
+                "wednesday": 7,
+                "thursday": 7,
+                "friday": 7,
+                "saturday": 0,
+                "sunday": 0,
+            },
+        ),
     )
     session.add(org)
     await session.commit()
@@ -65,20 +73,20 @@ async def get_organization(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization",
         )
-    
+
     query = select(Organization).where(
         Organization.id == org_id,
         Organization.deleted_at.is_(None),
     )
     result = await session.execute(query)
     org = result.scalar_one_or_none()
-    
+
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found",
         )
-    
+
     return org
 
 
@@ -95,25 +103,25 @@ async def update_organization(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization",
         )
-    
+
     query = select(Organization).where(
         Organization.id == org_id,
         Organization.deleted_at.is_(None),
     )
     result = await session.execute(query)
     org = result.scalar_one_or_none()
-    
+
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found",
         )
-    
+
     # Update fields
     for key, value in data.items():
         if hasattr(org, key):
             setattr(org, key, value)
-    
+
     await session.commit()
     await session.refresh(org)
     return org
@@ -131,19 +139,19 @@ async def delete_organization(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization",
         )
-    
+
     query = select(Organization).where(
         Organization.id == org_id,
         Organization.deleted_at.is_(None),
     )
     result = await session.execute(query)
     org = result.scalar_one_or_none()
-    
+
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found",
         )
-    
+
     org.soft_delete()
     await session.commit()

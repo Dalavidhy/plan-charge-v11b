@@ -1,19 +1,19 @@
 """Person and User schemas."""
 
-from typing import Optional, List
 from datetime import date
+from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.schemas.base import BaseResponse
 
 
 class PersonCreate(BaseModel):
     """Schema for creating person."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     first_name: str
     last_name: str
     email: EmailStr
@@ -27,9 +27,9 @@ class PersonCreate(BaseModel):
 
 class PersonUpdate(BaseModel):
     """Schema for updating person."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -43,7 +43,7 @@ class PersonUpdate(BaseModel):
 
 class PersonResponse(BaseResponse):
     """Schema for person response."""
-    
+
     first_name: str
     last_name: str
     email: EmailStr
@@ -57,9 +57,9 @@ class PersonResponse(BaseResponse):
 
 class UserCreate(BaseModel):
     """Schema for creating user."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     email: EmailStr
     password: str
     first_name: str
@@ -70,9 +70,9 @@ class UserCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     """Schema for updating user."""
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
+
     email: Optional[EmailStr] = None
     password: Optional[str] = None
     first_name: Optional[str] = None
@@ -83,7 +83,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseResponse):
     """Schema for user response."""
-    
+
     email: EmailStr
     first_name: str
     last_name: str

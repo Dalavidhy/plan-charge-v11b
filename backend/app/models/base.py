@@ -14,9 +14,9 @@ from app.database import Base
 
 class TimestampMixin:
     """Mixin for created_at and updated_at timestamps."""
-    
+
     __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
-    
+
     @declared_attr
     def created_at(cls):
         return Column(
@@ -25,7 +25,7 @@ class TimestampMixin:
             server_default=func.now(),
             index=True,
         )
-    
+
     @declared_attr
     def updated_at(cls):
         return Column(
@@ -39,26 +39,26 @@ class TimestampMixin:
 
 class SoftDeleteMixin:
     """Mixin for soft delete functionality."""
-    
+
     __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
-    
+
     @declared_attr
     def deleted_at(cls):
         return Column(DateTime(timezone=True), nullable=True, index=True)
-    
+
     @property
     def is_deleted(self) -> bool:
         """Check if the record is soft deleted."""
         return self.deleted_at is not None
-    
+
     def soft_delete(self) -> None:
         """Soft delete the record."""
         self.deleted_at = datetime.utcnow()
-    
+
     def restore(self) -> None:
         """Restore a soft deleted record."""
         self.deleted_at = None
-    
+
     @classmethod
     def filter_active(cls, query: Query) -> Query:
         """Filter out soft deleted records."""
@@ -67,10 +67,10 @@ class SoftDeleteMixin:
 
 class BaseModel(Base, TimestampMixin):
     """Base model with common fields."""
-    
+
     __abstract__ = True
     __allow_unmapped__ = True  # Allow legacy SQLAlchemy 1.x style annotations
-    
+
     id = Column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -78,11 +78,11 @@ class BaseModel(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
-    
+
     def __repr__(self) -> str:
         """String representation."""
         return f"<{self.__class__.__name__}(id={self.id})>"
-    
+
     def dict(self, exclude: Optional[set] = None) -> dict[str, Any]:
         """Convert model to dictionary."""
         exclude = exclude or set()
@@ -91,12 +91,12 @@ class BaseModel(Base, TimestampMixin):
             for column in self.__table__.columns
             if column.name not in exclude
         }
-    
+
     @classmethod
     def create(cls, **kwargs) -> "BaseModel":
         """Create a new instance."""
         return cls(**kwargs)
-    
+
     def update(self, **kwargs) -> None:
         """Update model attributes."""
         for key, value in kwargs.items():

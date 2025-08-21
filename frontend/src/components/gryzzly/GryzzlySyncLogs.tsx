@@ -23,11 +23,11 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Loader2, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   Clock,
   RefreshCw,
   Users,
@@ -55,15 +55,15 @@ export default function GryzzlySyncLogs() {
       const params: any = {
         limit: 100,
       };
-      
+
       if (selectedType !== 'all') {
         params.sync_type = selectedType;
       }
-      
+
       if (selectedStatus !== 'all') {
         params.status = selectedStatus;
       }
-      
+
       const data = await gryzzlyService.getSyncLogs(params);
       setSyncLogs(data);
     } catch (error) {
@@ -94,14 +94,14 @@ export default function GryzzlySyncLogs() {
       'in_progress': 'outline',
       'pending': 'default'
     };
-    
+
     const labels: Record<string, string> = {
       'success': 'Succès',
       'error': 'Erreur',
       'in_progress': 'En cours',
       'pending': 'En attente'
     };
-    
+
     return (
       <Badge variant={variants[status] || 'default'}>
         {labels[status] || status}
@@ -134,7 +134,7 @@ export default function GryzzlySyncLogs() {
       'declarations': 'Déclarations',
       'full': 'Complète'
     };
-    
+
     return (
       <div className="flex items-center gap-1">
         {getTypeIcon(type)}
@@ -224,7 +224,7 @@ export default function GryzzlySyncLogs() {
               <SelectItem value="full">Synchronisation complète</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Tous les statuts" />
@@ -237,7 +237,7 @@ export default function GryzzlySyncLogs() {
               <SelectItem value="pending">En attente</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Button
             variant="outline"
             size="sm"

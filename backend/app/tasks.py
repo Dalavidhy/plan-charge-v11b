@@ -38,6 +38,7 @@ celery_app.conf.beat_schedule = {}
 # Placeholder tasks - return success for compatibility
 # These will be implemented when needed (see tasks_future.py.example)
 
+
 @celery_app.task(name="app.tasks.sync_external_data")
 def sync_external_data():
     """Placeholder for external data sync. See tasks_future.py.example for implementation plan."""
@@ -59,16 +60,28 @@ def cleanup_old_sessions():
 @celery_app.task(name="app.tasks.send_email")
 def send_email(to: str, subject: str, body: str):
     """Placeholder for email sending. See tasks_future.py.example for implementation plan."""
-    return {"status": "skipped", "message": f"Email to {to} not sent - task not implemented"}
+    return {
+        "status": "skipped",
+        "message": f"Email to {to} not sent - task not implemented",
+    }
 
 
 @celery_app.task(name="app.tasks.generate_report")
 def generate_report(report_type: str, params: dict):
     """Placeholder for report generation. See tasks_future.py.example for implementation plan."""
-    return {"status": "skipped", "report_id": None, "message": "Task not yet implemented"}
+    return {
+        "status": "skipped",
+        "report_id": None,
+        "message": "Task not yet implemented",
+    }
 
 
 @celery_app.task(name="app.tasks.process_bulk_import")
 def process_bulk_import(file_path: str, import_type: str):
     """Placeholder for bulk import. See tasks_future.py.example for implementation plan."""
-    return {"status": "skipped", "imported": 0, "errors": 0, "message": "Task not yet implemented"}
+    return {
+        "status": "skipped",
+        "imported": 0,
+        "errors": 0,
+        "message": "Task not yet implemented",
+    }

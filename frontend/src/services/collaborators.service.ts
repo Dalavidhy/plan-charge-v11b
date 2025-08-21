@@ -45,7 +45,7 @@ class CollaboratorsService {
       if (activeOnly) {
         params.append('active_only', 'true');
       }
-      
+
       const response = await api.get(`/collaborators?${params.toString()}`);
       return response.data;
     } catch (error) {
@@ -58,7 +58,7 @@ class CollaboratorsService {
    * Update collaborator properties
    */
   async updateCollaborator(
-    id: string, 
+    id: string,
     updates: { actif?: boolean; eligibleTR?: boolean; matricule?: string }
   ): Promise<{ success: boolean; message: string }> {
     try {
@@ -114,9 +114,9 @@ class CollaboratorsService {
    */
   filterCollaborators(collaborators: Collaborator[], searchTerm: string): Collaborator[] {
     if (!searchTerm) return collaborators;
-    
+
     const term = searchTerm.toLowerCase();
-    return collaborators.filter(collab => 
+    return collaborators.filter(collab =>
       collab.nom.toLowerCase().includes(term) ||
       collab.email.toLowerCase().includes(term) ||
       (collab.matricule && collab.matricule.toLowerCase().includes(term))
@@ -176,11 +176,11 @@ class CollaboratorsService {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

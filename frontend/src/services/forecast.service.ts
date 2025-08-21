@@ -194,14 +194,14 @@ class ForecastService {
   calculateMonthlyTotal(forecasts: ForecastData, collaboratorId: string): number {
     const collaborator = forecasts.collaborators.find(c => c.collaborator_id === collaboratorId);
     if (!collaborator) return 0;
-    
+
     let total = 0;
     Object.values(collaborator.forecasts).forEach(dayForecasts => {
       dayForecasts.forEach(forecast => {
         total += forecast.hours;
       });
     });
-    
+
     return total;
   }
 

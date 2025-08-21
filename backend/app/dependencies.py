@@ -21,7 +21,7 @@ async def get_current_user(
 ) -> User:
     """Get current authenticated user."""
     token = credentials.credentials
-    
+
     # Verify token
     payload = verify_token(token, token_type="access")
     if not payload:
@@ -30,7 +30,7 @@ async def get_current_user(
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Get user from database
     user_id = payload.get("sub")
     if not user_id:
@@ -39,7 +39,7 @@ async def get_current_user(
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     query = (
         select(User)
         .options(
@@ -50,17 +50,17 @@ async def get_current_user(
         .where(User.id == user_id)
         .where(User.is_active == True)
     )
-    
+
     result = await session.execute(query)
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return user
 
 
@@ -78,26 +78,26 @@ async def get_current_active_user(
 
 def require_role(allowed_roles: list[str]):
     """Require specific roles for access."""
-    
+
     async def role_checker(
         current_user: User = Depends(get_current_active_user),
     ) -> User:
         """Check if user has required role."""
         user_roles = [role.role for role in current_user.roles]
-        
+
         # Owner can access everything
         if "owner" in user_roles:
             return current_user
-        
+
         # Check if user has any of the allowed roles
         if not any(role in allowed_roles for role in user_roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
             )
-        
+
         return current_user
-    
+
     return role_checker
 
 
@@ -118,7 +118,7 @@ async def get_current_user_optional(
     """Get current user if authenticated, otherwise None."""
     if not credentials:
         return None
-    
+
     try:
         return await get_current_user(credentials, session)
     except HTTPException:

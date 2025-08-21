@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for request/response logging."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Log request and response details."""
         start_time = time.time()
-        
+
         # Log request
         request_id = getattr(request.state, "request_id", "unknown")
         logger.info(
@@ -29,13 +29,13 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "client": request.client.host if request.client else None,
             },
         )
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Calculate duration
         duration = time.time() - start_time
-        
+
         # Log response
         logger.info(
             "Request completed",
@@ -47,8 +47,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "duration": round(duration, 3),
             },
         )
-        
+
         # Add timing header
         response.headers["X-Response-Time"] = str(round(duration, 3))
-        
+
         return response

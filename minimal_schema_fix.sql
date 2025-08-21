@@ -38,11 +38,11 @@ CREATE INDEX IF NOT EXISTS ix_users_azure_id ON users(azure_id);
 CREATE INDEX IF NOT EXISTS ix_users_email ON users(email);
 
 -- Insert required organizations
-INSERT INTO organizations (id, name, created_at, updated_at) 
-VALUES 
+INSERT INTO organizations (id, name, created_at, updated_at)
+VALUES
     ('00000000-0000-0000-0000-000000000001', 'NDA Partners', NOW(), NOW()),
     ('00000000-0000-0000-0000-000000000002', 'Default Organization', NOW(), NOW())
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     updated_at = NOW();
 

@@ -129,11 +129,11 @@ if [ "$FRONTEND_STATUS" = "200" ]; then
     echo -n "3.2 Home page... "
     HOME_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL/")
     [ "$HOME_STATUS" = "200" ] && print_result 0 "Home page accessible" || print_result 1 "Home page not accessible (HTTP $HOME_STATUS)"
-    
+
     echo -n "3.3 Login page... "
     LOGIN_PAGE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL/login")
     [ "$LOGIN_PAGE_STATUS" = "200" ] && print_result 0 "Login page accessible" || echo "⚠️  Login page returns HTTP $LOGIN_PAGE_STATUS"
-    
+
     echo -n "3.4 Static assets... "
     # Check if index.html has script tags
     SCRIPTS=$(curl -s "$FRONTEND_URL/" | grep -c "<script" || echo "0")

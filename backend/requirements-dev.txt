@@ -22,6 +22,7 @@ mypy==1.7.1
 pylint==3.0.3
 isort==5.12.0
 bandit==1.7.5
+pre-commit==3.6.0
 # safety==3.0.1 # Disabled due to pydantic conflict
 
 # Type Stubs

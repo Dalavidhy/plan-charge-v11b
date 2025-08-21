@@ -55,7 +55,7 @@ export default function PlanDeCharge() {
   const days = useMemo(() => getDaysInMonth(year, monthIndex), [year, monthIndex]);
   const monthKey = `${year}-${String(monthIndex+1).padStart(2,'0')}`;
   const actifs = state.collaborateurs.filter(c => c.actif);
-  
+
   // Calculate global metrics
   const globalMetrics = useMemo(() => {
     let totalWorkingDays = 0;
@@ -64,31 +64,31 @@ export default function PlanDeCharge() {
     let totalForecastDays = 0;
     let totalNotPlannedDays = 0;
     let collaboratorsWithIssues = 0;
-    
+
     // Daily statistics for the footer
     const dailyStats: Record<string, { available: number; planned: number }> = {};
-    
+
     actifs.forEach(c => {
       const planChargeCollab = planChargeData?.collaborators.find(
         pc => pc.email.toLowerCase() === c.email.toLowerCase()
       );
-      
+
       let collabWorkingDays = 0;
       let collabAbsenceDays = 0;
       let collabImputedDays = 0;
       let collabForecastDays = 0;
       let collabNotPlannedDays = 0;
-      
+
       days.forEach(day => {
         if (!day.isWeekend && !day.isHoliday) {
           collabWorkingDays++;
           const dk = `${year}-${String(monthIndex+1).padStart(2,'0')}-${String(day.d).padStart(2,'0')}`;
-          
+
           // Initialize daily stats
           if (!dailyStats[dk]) {
             dailyStats[dk] = { available: 0, planned: 0 };
           }
-          
+
           // Check for absence
           const hasAbsence = planChargeCollab?.absences?.some(absence => {
             const absStart = new Date(absence.start_date);
@@ -96,11 +96,11 @@ export default function PlanDeCharge() {
             const checkDate = new Date(dk);
             return checkDate >= absStart && checkDate <= absEnd;
           }) || false;
-          
+
           // Check for declarations (imputations)
           const declarations = planChargeCollab?.declarations?.[dk] || [];
           const hasDeclarations = declarations.length > 0;
-          
+
           // Check for forecasts
           let hasForecast = false;
           if (forecastData && planChargeCollab) {
@@ -111,7 +111,7 @@ export default function PlanDeCharge() {
               hasForecast = collabForecast.forecasts[dk].length > 0;
             }
           }
-          
+
           if (hasAbsence) {
             collabAbsenceDays++;
             dailyStats[dk].planned++; // Absence counts as planned
@@ -129,19 +129,19 @@ export default function PlanDeCharge() {
           }
         }
       });
-      
+
       // Calculate TACE for this collaborator
       const availableDays = collabWorkingDays - collabAbsenceDays;
       const plannedDays = collabImputedDays + collabForecastDays + collabAbsenceDays;
-      const tacePercentage = availableDays > 0 
+      const tacePercentage = availableDays > 0
         ? Math.round(((plannedDays - collabAbsenceDays) / availableDays) * 100)
         : 0;
-      
+
       // Check if collaborator has staffing issues
       if (tacePercentage < 50 || collabNotPlannedDays > 3) {
         collaboratorsWithIssues++;
       }
-      
+
       // Aggregate totals
       totalWorkingDays += collabWorkingDays;
       totalAbsenceDays += collabAbsenceDays;
@@ -149,22 +149,22 @@ export default function PlanDeCharge() {
       totalForecastDays += collabForecastDays;
       totalNotPlannedDays += collabNotPlannedDays;
     });
-    
+
     const totalAvailableDays = totalWorkingDays - totalAbsenceDays;
-    const globalTACE = totalAvailableDays > 0 
+    const globalTACE = totalAvailableDays > 0
       ? Math.round(((totalImputedDays + totalForecastDays) / totalAvailableDays) * 100)
       : 0;
-    
-    const imputedPercentage = totalWorkingDays > 0 
+
+    const imputedPercentage = totalWorkingDays > 0
       ? Math.round((totalImputedDays / totalWorkingDays) * 100)
       : 0;
-    const forecastPercentage = totalWorkingDays > 0 
+    const forecastPercentage = totalWorkingDays > 0
       ? Math.round((totalForecastDays / totalWorkingDays) * 100)
       : 0;
-    const notPlannedPercentage = totalWorkingDays > 0 
+    const notPlannedPercentage = totalWorkingDays > 0
       ? Math.round((totalNotPlannedDays / totalWorkingDays) * 100)
       : 0;
-    
+
     return {
       globalTACE,
       collaboratorsWithIssues,
@@ -233,12 +233,12 @@ export default function PlanDeCharge() {
         hours_per_day: 7,
         description
       });
-      
+
       toast({
         title: "Succès",
         description: `${result.created} prévisionnels créés, ${result.updated} mis à jour`,
       });
-      
+
       // Refresh forecast data
       await fetchForecastData();
     } catch (error) {
@@ -261,11 +261,11 @@ export default function PlanDeCharge() {
       setAddCollaboratorId(group.collaborator_id);
       setAddProject(group.project_id);
       setAddTask(group.task_id || "");
-      
+
       // Find and set the selected project
       const project = projects.find(p => p.id === group.project_id);
       setSelectedProject(project || null);
-      
+
       setAddOpen(true);
     } catch (error) {
       logger.error('Error fetching forecast group:', error);
@@ -331,7 +331,7 @@ export default function PlanDeCharge() {
       </AppLayout>
     );
   }
-  
+
   // Show loading state while collaborators are being loaded
   if (state.collaborateursLoading || (state.collaborateurs.length === 0 && !state.collaborateursError)) {
     return (
@@ -361,7 +361,7 @@ export default function PlanDeCharge() {
                 {globalMetrics.globalTACE}%
               </div>
             </div>
-            
+
             <div className="bg-white p-4 rounded-lg shadow">
               <div className="text-sm text-gray-600 mb-1">Collaborateurs sans staffing suffisant</div>
               <div className={`text-2xl font-bold ${
@@ -371,7 +371,7 @@ export default function PlanDeCharge() {
                 {globalMetrics.collaboratorsWithIssues}
               </div>
             </div>
-            
+
             <div className="bg-white p-4 rounded-lg shadow">
               <div className="text-sm text-gray-600 mb-1">Répartition des activités</div>
               <div className="flex items-center space-x-2 text-sm">
@@ -383,7 +383,7 @@ export default function PlanDeCharge() {
               </div>
               <div className="text-xs text-gray-500 mt-1">Imputé / Prévisionnel / Non planifié</div>
             </div>
-            
+
             <div className="bg-white p-4 rounded-lg shadow">
               <div className="text-sm text-gray-600 mb-1">Équipe</div>
               <div className="text-2xl font-bold text-gray-700">
@@ -392,7 +392,7 @@ export default function PlanDeCharge() {
             </div>
           </div>
         )}
-        
+
         <div className="flex flex-col gap-2">
           <div>
             <h2 className="text-xl font-semibold">Mois</h2>
@@ -462,18 +462,18 @@ export default function PlanDeCharge() {
                 const planChargeCollab = planChargeData?.collaborators.find(
                   pc => pc.email.toLowerCase() === c.email.toLowerCase()
                 );
-                
+
                 // Calculate TACE metrics for this collaborator
                 let workingDays = 0;
                 let daysWithAbsence = 0;
                 let daysWithActivity = 0;
                 let daysNotPlanned = 0;
-                
+
                 days.forEach(day => {
                   if (!day.isWeekend && !day.isHoliday) {
                     workingDays++;
                     const dk = dateKey(day.d);
-                    
+
                     // Check for absence
                     const hasAbsence = planChargeCollab?.absences?.some(absence => {
                       const absStart = new Date(absence.start_date);
@@ -481,11 +481,11 @@ export default function PlanDeCharge() {
                       const checkDate = new Date(dk);
                       return checkDate >= absStart && checkDate <= absEnd;
                     }) || false;
-                    
+
                     // Check for declarations (imputations)
                     const declarations = planChargeCollab?.declarations?.[dk] || [];
                     const hasDeclarations = declarations.length > 0;
-                    
+
                     // Check for forecasts
                     let hasForecast = false;
                     if (forecastData && planChargeCollab) {
@@ -496,7 +496,7 @@ export default function PlanDeCharge() {
                         hasForecast = collabForecast.forecasts[dk].length > 0;
                       }
                     }
-                    
+
                     if (hasAbsence) {
                       daysWithAbsence++;
                       daysWithActivity++; // Absence counts as planned activity
@@ -507,19 +507,19 @@ export default function PlanDeCharge() {
                     }
                   }
                 });
-                
+
                 // Calculate TACE percentage
                 const availableDays = workingDays - daysWithAbsence;
-                const tacePercentage = availableDays > 0 
+                const tacePercentage = availableDays > 0
                   ? Math.round(((daysWithActivity - daysWithAbsence) / availableDays) * 100)
                   : 0;
-                
+
                 // Determine colors
                 const taceColor = tacePercentage >= 80 ? 'bg-green-100 text-green-800' :
                                  tacePercentage >= 50 ? 'bg-orange-100 text-orange-800' :
                                  'bg-red-100 text-red-800';
                 const nameColor = daysNotPlanned > 3 ? 'text-red-600 font-semibold' : '';
-                
+
                 return (
                   <React.Fragment key={c.id}>
                     <tr key={`${c.id}-main`} className="border-t">
@@ -552,7 +552,7 @@ export default function PlanDeCharge() {
                             variant="ghost"
                             size="icon"
                             className="ml-2 flex-shrink-0"
-                          onClick={() => { 
+                          onClick={() => {
                             // Find the matching Gryzzly collaborator ID
                             const gryzzlyCollab = planChargeData?.collaborators.find(
                               pc => pc.email.toLowerCase() === c.email.toLowerCase()
@@ -589,7 +589,7 @@ export default function PlanDeCharge() {
                           planChargeCollab?.absences || [],
                           dk
                         );
-                        
+
                         // Check for forecasts
                         let forecastHours = 0;
                         if (forecastData && planChargeCollab) {
@@ -600,11 +600,11 @@ export default function PlanDeCharge() {
                             forecastHours = collabForecast.forecasts[dk].reduce((sum, f) => sum + f.hours, 0);
                           }
                         }
-                        
+
                         // Determine what to show and color
                         let displayValue = null;
                         let colorClass = '';
-                        
+
                         if (!day.isWeekend && !day.isHoliday) {
                           if (dayHours.hasAbsence) {
                             // Absence - show in green
@@ -624,7 +624,7 @@ export default function PlanDeCharge() {
                             colorClass = 'bg-red-100 text-red-800';
                           }
                         }
-                        
+
                         return (
                           <td key={`${c.id}-${day.d}`} className={`h-8 text-center ${day.isWeekend || day.isHoliday ? 'bg-muted' : ''}`}>
                             {displayValue !== null ? (
@@ -666,7 +666,7 @@ export default function PlanDeCharge() {
                             if (!imputationsByProject[projectName]) {
                               imputationsByProject[projectName] = {};
                             }
-                            imputationsByProject[projectName][date] = 
+                            imputationsByProject[projectName][date] =
                               (imputationsByProject[projectName][date] || 0) + decl.hours;
                           });
                         });
@@ -680,33 +680,33 @@ export default function PlanDeCharge() {
                       // Get forecast data for this collaborator
                       const collabForecasts: Record<string, Record<string, number>> = {};
                       const forecastMeta: Record<string, { forecastId: string; description?: string }> = {};
-                      
+
                       if (forecastData && planChargeCollab) {
                         const collabForecast = forecastData.collaborators.find(
                           fc => fc.collaborator_id === planChargeCollab.collaborator_id
                         );
-                        
+
                         if (collabForecast) {
                           Object.entries(collabForecast.forecasts).forEach(([date, forecasts]) => {
                             forecasts.forEach(forecast => {
-                              const label = forecast.task_name 
+                              const label = forecast.task_name
                                 ? `${forecast.project_name} – ${forecast.task_name}`
                                 : forecast.project_name;
-                              
+
                               if (!collabForecasts[label]) collabForecasts[label] = {};
                               collabForecasts[label][date] = (collabForecasts[label][date] || 0) + forecast.hours;
-                              
+
                               // Store metadata for editing
                               const metaKey = `${date}-${label}`;
-                              forecastMeta[metaKey] = { 
-                                forecastId: forecast.id, 
-                                description: forecast.description 
+                              forecastMeta[metaKey] = {
+                                forecastId: forecast.id,
+                                description: forecast.description
                               };
                             });
                           });
                         }
                       }
-                      
+
                       const forecastLines = Object.entries(collabForecasts).map(([label, hoursByDay]) => ({
                         label,
                         kind: 'forecast' as const,
@@ -795,7 +795,7 @@ export default function PlanDeCharge() {
                         </td>
                       );
                     }
-                    const coverage = stats.available > 0 
+                    const coverage = stats.available > 0
                       ? Math.round((stats.planned / stats.available) * 100)
                       : 0;
                     const color = coverage >= 80 ? 'text-green-700' :
@@ -838,18 +838,18 @@ export default function PlanDeCharge() {
                 const start = String(fd.get('start') || '');
                 const end = String(fd.get('end') || '');
                 const description = String(fd.get('description') || '');
-                
+
                 if (addCollaboratorId && addProject && start && end) {
                   if (editMode && editGroup) {
                     // Delete old group and create new one
                     await forecastService.deleteForecastGroup(editGroup.forecast_ids);
                   }
-                  
+
                   await addForecastRange(
-                    addCollaboratorId, 
-                    addProject, 
-                    addTask || null, 
-                    start, 
+                    addCollaboratorId,
+                    addProject,
+                    addTask || null,
+                    start,
                     end,
                     description || undefined
                   );
@@ -872,8 +872,8 @@ export default function PlanDeCharge() {
                       <span className="ml-2 text-sm">Chargement des projets...</span>
                     </div>
                   ) : (
-                    <Select 
-                      value={addProject} 
+                    <Select
+                      value={addProject}
                       onValueChange={(value) => {
                         setAddProject(value);
                         const project = projects.find(p => p.id === value);
@@ -904,8 +904,8 @@ export default function PlanDeCharge() {
                 </div>
                 <div className="grid gap-1">
                   <Label htmlFor="task">Tâche (optionnel)</Label>
-                  <Select 
-                    value={addTask} 
+                  <Select
+                    value={addTask}
                     onValueChange={setAddTask}
                     disabled={!selectedProject || selectedProject.tasks.length === 0}
                   >
@@ -932,40 +932,40 @@ export default function PlanDeCharge() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1">
                     <Label htmlFor="start">Début</Label>
-                    <Input 
-                      id="start" 
-                      name="start" 
-                      type="date" 
-                      required 
+                    <Input
+                      id="start"
+                      name="start"
+                      type="date"
+                      required
                       defaultValue={editGroup?.start_date || ''}
                     />
                   </div>
                   <div className="grid gap-1">
                     <Label htmlFor="end">Fin</Label>
-                    <Input 
-                      id="end" 
-                      name="end" 
-                      type="date" 
-                      required 
+                    <Input
+                      id="end"
+                      name="end"
+                      type="date"
+                      required
                       defaultValue={editGroup?.end_date || ''}
                     />
                   </div>
                 </div>
                 <div className="grid gap-1">
                   <Label htmlFor="description">Description (optionnel)</Label>
-                  <Input 
-                    id="description" 
-                    name="description" 
-                    type="text" 
-                    placeholder="Description du prévisionnel" 
+                  <Input
+                    id="description"
+                    name="description"
+                    type="text"
+                    placeholder="Description du prévisionnel"
                     defaultValue={editGroup?.description || ''}
                   />
                 </div>
               </div>
               <DialogFooter>
                 {editMode && (
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     variant="destructive"
                     onClick={async () => {
                       if (editGroup) {

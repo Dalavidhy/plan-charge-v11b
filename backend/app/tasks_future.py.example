@@ -13,7 +13,7 @@ from celery.schedules import crontab
 def sync_external_data_example():
     """
     Sync data from external providers (Payfit, Gryzzly).
-    
+
     Implementation checklist:
     - [ ] Fetch data from Payfit API
     - [ ] Fetch data from Gryzzly API
@@ -21,7 +21,7 @@ def sync_external_data_example():
     - [ ] Handle conflicts and duplicates
     - [ ] Update local database
     - [ ] Log sync results
-    
+
     Schedule: Every 6 hours
     """
     pass
@@ -30,14 +30,14 @@ def sync_external_data_example():
 def calculate_utilization_example():
     """
     Calculate and cache utilization metrics.
-    
+
     Implementation checklist:
     - [ ] Calculate team utilization rates
     - [ ] Calculate individual person utilization
     - [ ] Aggregate project allocations
     - [ ] Cache results in Redis with TTL
     - [ ] Generate utilization reports
-    
+
     Schedule: Daily at 2 AM
     """
     pass
@@ -46,14 +46,14 @@ def calculate_utilization_example():
 def cleanup_old_sessions_example():
     """
     Clean up expired sessions and tokens.
-    
+
     Implementation checklist:
     - [ ] Remove expired refresh tokens
     - [ ] Clean up old audit logs (>90 days)
     - [ ] Remove soft-deleted records past retention period
     - [ ] Clean up temporary files
     - [ ] Vacuum database if needed
-    
+
     Schedule: Daily at 3 AM
     """
     pass
@@ -62,7 +62,7 @@ def cleanup_old_sessions_example():
 def send_email_example(to: str, subject: str, body: str, html_body: str = None):
     """
     Send email notification via SMTP or email service.
-    
+
     Implementation checklist:
     - [ ] Configure SMTP settings (host, port, credentials)
     - [ ] Support both text and HTML emails
@@ -70,7 +70,7 @@ def send_email_example(to: str, subject: str, body: str, html_body: str = None):
     - [ ] Add email templates
     - [ ] Implement retry logic for failures
     - [ ] Log email sending status
-    
+
     Usage:
     send_email.delay(
         to="user@example.com",
@@ -85,20 +85,20 @@ def send_email_example(to: str, subject: str, body: str, html_body: str = None):
 def generate_report_example(report_type: str, params: dict):
     """
     Generate async reports (PDF, Excel, CSV).
-    
+
     Report types:
     - utilization: Team and person utilization reports
     - allocation: Resource allocation reports
     - forecast: Capacity forecast reports
     - timesheet: Timesheet and billing reports
-    
+
     Implementation checklist:
     - [ ] Generate report based on type
     - [ ] Support multiple export formats (PDF, Excel, CSV)
     - [ ] Store result in S3 or database
     - [ ] Send notification when complete
     - [ ] Implement progress tracking
-    
+
     Usage:
     generate_report.delay(
         report_type="utilization",
@@ -111,13 +111,13 @@ def generate_report_example(report_type: str, params: dict):
 def process_bulk_import_example(file_path: str, import_type: str):
     """
     Process bulk import from CSV/Excel files.
-    
+
     Import types:
     - people: Import people/employees
     - projects: Import projects
     - allocations: Import resource allocations
     - timesheets: Import timesheet entries
-    
+
     Implementation checklist:
     - [ ] Read and parse CSV/Excel file
     - [ ] Validate data format and required fields
@@ -125,7 +125,7 @@ def process_bulk_import_example(file_path: str, import_type: str):
     - [ ] Import into database with transaction
     - [ ] Generate import report with success/error counts
     - [ ] Send notification with results
-    
+
     Usage:
     process_bulk_import.delay(
         file_path="/uploads/people.csv",
@@ -138,7 +138,7 @@ def process_bulk_import_example(file_path: str, import_type: str):
 def sync_payfit_data_example():
     """
     Specific task for Payfit synchronization.
-    
+
     Implementation checklist:
     - [ ] Authenticate with Payfit API
     - [ ] Fetch employee list
@@ -154,7 +154,7 @@ def sync_payfit_data_example():
 def sync_gryzzly_data_example():
     """
     Specific task for Gryzzly synchronization.
-    
+
     Implementation checklist:
     - [ ] Authenticate with Gryzzly API
     - [ ] Fetch collaborators

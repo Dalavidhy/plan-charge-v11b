@@ -17,14 +17,14 @@ ZIP_FILE="lambda-sso-fix.zip"
 # Cleanup function
 cleanup() {
     echo "🧹 Cleaning up..."
-    
+
     # Delete Lambda function
     aws lambda delete-function --function-name "$FUNCTION_NAME" --region "$REGION" 2>/dev/null || true
-    
+
     # Delete IAM role
     aws iam detach-role-policy --role-name "$ROLE_NAME" --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" 2>/dev/null || true
     aws iam delete-role --role-name "$ROLE_NAME" 2>/dev/null || true
-    
+
     # Remove temp files
     rm -rf "$TEMP_DIR"
     echo "✅ Cleanup completed"
@@ -119,9 +119,9 @@ aws lambda invoke \
 if [ -f response.json ]; then
     echo "📄 Response:"
     cat response.json | jq .
-    
+
     SUCCESS=$(cat response.json | jq -r '.body | fromjson | .success // false' 2>/dev/null || echo "false")
-    
+
     if [ "$SUCCESS" = "true" ]; then
         echo "🎉 SSO FIX SUCCESSFUL!"
         echo "✅ Default Organization added to database"

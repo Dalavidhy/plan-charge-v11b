@@ -34,7 +34,7 @@ export const useSSO = (): UseSSO => {
   const { instance, accounts, inProgress } = useMsal();
   const [isLoading, setIsLoading] = useState(false);
   const [ssoStatus, setSSOStatus] = useState<SSOStatus | null>(null);
-  
+
   const account = accounts[0] || null;
   const isAuthenticated = !!account;
 
@@ -65,11 +65,11 @@ export const useSSO = (): UseSSO => {
       try {
         // Use MSAL to initiate login
         const result: AuthenticationResult = await instance.loginPopup(loginRequest);
-        
+
         if (result && result.account) {
           // Exchange the Azure AD token for our app tokens
           const response = await exchangeCodeForToken(result.accessToken);
-          
+
           if (response) {
             toast.success("Connexion SSO réussie!");
             // The app will handle the tokens and redirect
@@ -92,7 +92,7 @@ export const useSSO = (): UseSSO => {
       const response = await axios.post(`${API_BASE_URL}/api/v1/auth/sso/callback`, {
         code: code,
       });
-      
+
       // Store tokens in localStorage
       if (response.data.access_token) {
         localStorage.setItem("access_token", response.data.access_token);
@@ -123,16 +123,16 @@ export const useSSO = (): UseSSO => {
           },
         }
       );
-      
+
       // Clear local tokens
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
-      
+
       // Logout from MSAL
       await instance.logoutPopup({
         postLogoutRedirectUri: response.data.logout_url || window.location.origin,
       });
-      
+
       toast.success("Déconnexion réussie");
     } catch (error) {
       logger.error("SSO logout failed:", error);

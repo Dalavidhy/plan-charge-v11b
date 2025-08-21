@@ -15,20 +15,20 @@ export default function Auth() {
   const { instance, accounts, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const { isAuthenticated: isBackendAuthenticated, isLoading: isAuthLoading } = useAuth();
-  
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasProcessedAuth, setHasProcessedAuth] = useState(false);
   const [redirectCount, setRedirectCount] = useState(0);
-  
-  
+
+
   useEffect(() => {
     setSEO({
       title: "Connexion — Accès privé",
       description: "Accédez à la plateforme privée.",
       canonical: "/login",
     });
-    
+
     // Reset redirect count when component mounts (user navigated back to login)
     setRedirectCount(0);
     logger.log("🔄 Auth.tsx: Component mounted, reset redirect count");
@@ -53,20 +53,20 @@ export default function Auth() {
   // Redirect if already fully authenticated - with anti-loop protection
   useEffect(() => {
     logger.log("🔀 Auth.tsx: Checking redirect - isAuthLoading:", isAuthLoading, "isBackendAuth:", isBackendAuthenticated, "redirectCount:", redirectCount);
-    
+
     // Wait for auth context to fully load
     if (isAuthLoading) {
       logger.log("⏳ Auth.tsx: AuthContext still loading, waiting...");
       return;
     }
-    
+
     // Anti-loop protection: if we've tried to redirect too many times, stop
     if (redirectCount >= 3) {
       logger.error("🚨 Auth.tsx: Too many redirect attempts, stopping to prevent infinite loop");
       setError("Problème de redirection détecté. Rechargez la page ou essayez de naviguer manuellement vers /plan");
       return;
     }
-    
+
     // If user is fully authenticated via AuthContext, redirect to plan
     if (isBackendAuthenticated) {
       logger.log("🚀 Auth.tsx: User authenticated via AuthContext, redirecting to /plan (attempt", redirectCount + 1, ")");
@@ -74,12 +74,12 @@ export default function Auth() {
       navigate("/plan", { replace: true });
       return;
     }
-    
+
     logger.log("🔍 Auth.tsx: User not yet authenticated, staying on login page");
   }, [isBackendAuthenticated, isAuthLoading, navigate, redirectCount]);
 
   // Note: MSAL React automatically handles redirects, no manual handling needed
-  
+
   /**
    * Handle successful authentication by getting tokens and creating user in backend
    */
@@ -88,12 +88,12 @@ export default function Auth() {
       logger.log("🔄 Auth.tsx: handleAuthenticationSuccess() already in progress, skipping");
       return; // Prevent multiple simultaneous calls
     }
-    
+
     logger.log("🚀 Auth.tsx: Starting handleAuthenticationSuccess()");
     setIsLoading(true);
     setHasProcessedAuth(true); // Mark as processing to prevent duplicate calls
     setError("");
-    
+
     try {
       // Check if we already have valid backend tokens
       const existingToken = localStorage.getItem("access_token");
@@ -131,13 +131,13 @@ export default function Auth() {
       // Store backend tokens
       localStorage.setItem("access_token", backendResponse.data.access_token);
       localStorage.setItem("refresh_token", backendResponse.data.refresh_token);
-      
+
       logger.log("🚀 Auth.tsx: Tokens stored, navigating to /plan");
       // Navigate to main app
       navigate("/plan", { replace: true });
-      
+
     } catch (error: any) {
-      
+
       if (error instanceof InteractionRequiredAuthError) {
         // Token expired or requires interaction, trigger login
         setHasProcessedAuth(false); // Reset flag to allow retry
@@ -174,7 +174,7 @@ export default function Auth() {
 
     setIsLoading(true);
     setError("");
-    
+
     try {
       await instance.loginRedirect(loginRequest);
     } catch (error) {
@@ -221,7 +221,7 @@ export default function Auth() {
   }
 
 
-  
+
   return (
     <div className="min-h-screen flex">
       <aside className="hidden md:flex w-1/2 items-center justify-center bg-hero animate-gradient">
@@ -239,23 +239,23 @@ export default function Auth() {
           <p className="text-sm text-muted-foreground mb-6">
             Utilisez votre compte Microsoft professionnel
           </p>
-          
+
           {error && (
             <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md mb-4">
               {error}
               {error.includes("redirection détecté") && (
                 <div className="mt-3 space-y-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => navigate("/plan", { replace: true })}
                     className="w-full"
                   >
                     Aller directement au plan
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => window.location.reload()}
                     className="w-full"
                   >
@@ -265,7 +265,7 @@ export default function Auth() {
               )}
             </div>
           )}
-          
+
           <Button
             className="w-full"
             size="lg"
@@ -285,7 +285,7 @@ export default function Auth() {
             </svg>
             Se connecter avec Microsoft
           </Button>
-          
+
           <p className="text-xs text-muted-foreground text-center mt-6">
             Seuls les utilisateurs @nda-partners.com sont autorisés.
           </p>

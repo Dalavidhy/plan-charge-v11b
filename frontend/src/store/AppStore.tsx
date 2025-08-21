@@ -242,7 +242,7 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       logger.debug("🔄 AppStore: Auto-loading collaborators");
       dispatch({ type: "SET_COLLABORATEURS_LOADING", loading: true });
-      
+
       try {
         const collaborators = await collaboratorsService.getCollaborators();
         logger.debug("✅ AppStore: Loaded", collaborators.length, "collaborators");

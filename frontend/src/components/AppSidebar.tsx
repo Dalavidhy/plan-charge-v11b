@@ -45,15 +45,15 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         <SidebarSeparator />
-        
+
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="flex justify-center p-4">
-              <img 
-                src={NDALogo} 
-                alt="NDA Partners" 
+              <img
+                src={NDALogo}
+                alt="NDA Partners"
                 className="h-72 w-auto opacity-100"
               />
             </div>

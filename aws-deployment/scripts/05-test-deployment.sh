@@ -89,7 +89,7 @@ echo "📊 Test 7: État des services ECS"
 if [ ! -z "$AWS_REGION" ]; then
     echo "📋 Services ECS actifs:"
     aws ecs list-services --cluster plan-charge-prod-cluster --region $AWS_REGION --output table --query 'serviceArns' 2>/dev/null || echo "   Erreur d'accès ECS"
-    
+
     echo "📋 Tasks en cours d'exécution:"
     aws ecs list-tasks --cluster plan-charge-prod-cluster --region $AWS_REGION --desired-status RUNNING --output table --query 'taskArns' 2>/dev/null || echo "   Erreur d'accès ECS"
 fi

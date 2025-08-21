@@ -19,7 +19,7 @@ REPOSITORIES=(
 # Créer les repositories ECR
 for REPO in "${REPOSITORIES[@]}"; do
     echo "📋 Création du repository: $REPO"
-    
+
     # Créer le repository (ignore si existe déjà)
     aws ecr create-repository \
         --repository-name $REPO \
@@ -27,7 +27,7 @@ for REPO in "${REPOSITORIES[@]}"; do
         --image-scanning-configuration scanOnPush=true \
         --encryption-configuration encryptionType=AES256 2>/dev/null || \
     echo "⚠️  Repository $REPO existe déjà"
-    
+
     # Configurer la politique de lifecycle
     aws ecr put-lifecycle-policy \
         --repository-name $REPO \
@@ -48,7 +48,7 @@ for REPO in "${REPOSITORIES[@]}"; do
                 }
             ]
         }' >/dev/null
-        
+
     echo "✅ Repository $REPO configuré"
 done
 

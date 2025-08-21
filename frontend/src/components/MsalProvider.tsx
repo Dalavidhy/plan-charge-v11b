@@ -8,7 +8,7 @@ import { PublicClientApplication } from "@azure/msal-browser";
 import { msalConfig, isMSALConfigured } from "@/config/msalConfig";
 
 // Create MSAL instance only if configured
-const msalInstance = isMSALConfigured() 
+const msalInstance = isMSALConfigured()
   ? new PublicClientApplication(msalConfig)
   : null;
 

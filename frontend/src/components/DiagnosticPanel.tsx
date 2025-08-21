@@ -21,9 +21,9 @@ export default function DiagnosticPanel() {
   const runDiagnostic = async () => {
     setRunning(true);
     setResults([]);
-    
+
     const newResults: DiagnosticResult[] = [];
-    
+
     // Test 1: Authentication
     if (isAuthenticated && user) {
       newResults.push({
@@ -40,7 +40,7 @@ export default function DiagnosticPanel() {
         details: { isAuthenticated, user }
       });
     }
-    
+
     // Test 2: API Configuration
     const apiUrl = import.meta.env.VITE_API_URL;
     if (apiUrl) {
@@ -58,7 +58,7 @@ export default function DiagnosticPanel() {
         details: { apiUrl }
       });
     }
-    
+
     // Test 3: Backend Health
     try {
       const response = await fetch(`${apiUrl?.replace('/api/v1', '')}/health`);
@@ -86,7 +86,7 @@ export default function DiagnosticPanel() {
         details: error
       });
     }
-    
+
     // Test 4: Token presence
     const token = localStorage.getItem('access_token');
     if (token) {
@@ -95,7 +95,7 @@ export default function DiagnosticPanel() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const exp = payload.exp * 1000;
         const now = Date.now();
-        
+
         if (exp > now) {
           newResults.push({
             name: 'Token JWT',
@@ -140,7 +140,7 @@ export default function DiagnosticPanel() {
         VITE_AZURE_AD_TENANT_ID: import.meta.env.VITE_AZURE_AD_TENANT_ID
       }
     });
-    
+
     setResults(newResults);
     setRunning(false);
   };
@@ -176,8 +176,8 @@ export default function DiagnosticPanel() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Diagnostic du système
-          <Button 
-            onClick={runDiagnostic} 
+          <Button
+            onClick={runDiagnostic}
             disabled={running}
             size="sm"
           >
@@ -200,7 +200,7 @@ export default function DiagnosticPanel() {
             </AlertDescription>
           </Alert>
         )}
-        
+
         {results.map((result, index) => (
           <div key={index} className="flex items-center justify-between p-3 border rounded">
             <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ export default function DiagnosticPanel() {
             </div>
           </div>
         ))}
-        
+
         {results.length > 0 && (
           <details className="mt-4">
             <summary className="cursor-pointer text-sm text-muted-foreground">

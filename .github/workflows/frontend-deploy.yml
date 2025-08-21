@@ -16,7 +16,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     environment: production
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,12 +48,12 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          
+
           # Set environment variables for build
           export VITE_API_URL=${{ env.API_URL }}
           export VITE_ENVIRONMENT=${{ env.ENVIRONMENT }}
           export VITE_VERSION=${{ github.sha }}
-          
+
           # Build the application
           npm run build
 
@@ -67,14 +67,14 @@ jobs:
       - name: Deploy to S3
         run: |
           cd frontend
-          
+
           # Sync files to S3 bucket
           aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ \
             --delete \
             --cache-control "public, max-age=31536000" \
             --exclude "*.html" \
             --exclude "service-worker.js"
-          
+
           # Upload HTML files with no cache
           aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ \
             --delete \
@@ -92,13 +92,13 @@ jobs:
       - name: Run smoke tests
         run: |
           echo "Running smoke tests..."
-          
+
           # Wait for CloudFront invalidation to complete (simplified)
           sleep 30
-          
+
           # Basic smoke test
           FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
-          
+
           # Check if the site is accessible
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)
           if [[ $STATUS_CODE == "200" ]]; then

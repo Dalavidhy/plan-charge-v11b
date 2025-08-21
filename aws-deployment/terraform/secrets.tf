@@ -4,7 +4,7 @@
 resource "random_password" "jwt_secret" {
   length  = 32
   special = true
-  
+
   # Utiliser la variable fournie ou générer automatiquement
   keepers = {
     provided_secret = var.jwt_secret_key != "" ? var.jwt_secret_key : null

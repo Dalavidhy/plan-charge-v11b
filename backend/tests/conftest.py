@@ -50,7 +50,7 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    
+
     async with TestSessionLocal() as session:
         yield session
         await session.rollback()
@@ -59,15 +59,15 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture
 async def client(async_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     """Get async test client."""
-    
+
     async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
         yield async_session
-    
+
     app.dependency_overrides[get_async_session] = override_get_async_session
-    
+
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
-    
+
     app.dependency_overrides.clear()
 
 
@@ -133,7 +133,7 @@ async def test_user(
     )
     async_session.add(user)
     await async_session.flush()
-    
+
     # Add role
     role = UserOrgRole(
         org_id=test_org.id,
@@ -141,7 +141,7 @@ async def test_user(
         role="admin",
     )
     async_session.add(role)
-    
+
     await async_session.commit()
     await async_session.refresh(user)
     return user

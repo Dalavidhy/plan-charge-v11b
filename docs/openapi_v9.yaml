@@ -1270,4 +1270,3 @@ paths:
             schema: { $ref: '#/components/schemas/PersonBenefit' }
       responses:
         '201': { description: Created }
-

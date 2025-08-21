@@ -87,11 +87,11 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Add foreign key constraint for refresh_tokens.user_id now that users table exists
-ALTER TABLE refresh_tokens 
+ALTER TABLE refresh_tokens
 DROP CONSTRAINT IF EXISTS refresh_tokens_user_id_fkey;
 
-ALTER TABLE refresh_tokens 
-ADD CONSTRAINT refresh_tokens_user_id_fkey 
+ALTER TABLE refresh_tokens
+ADD CONSTRAINT refresh_tokens_user_id_fkey
 FOREIGN KEY (user_id) REFERENCES users(id);
 
 -- Create user_org_roles table
@@ -178,11 +178,11 @@ CREATE INDEX IF NOT EXISTS ix_refresh_tokens_org_id ON refresh_tokens(org_id);
 CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id ON refresh_tokens(user_id);
 
 -- Insert required organizations
-INSERT INTO organizations (id, name, created_at, updated_at) 
-VALUES 
+INSERT INTO organizations (id, name, created_at, updated_at)
+VALUES
     ('00000000-0000-0000-0000-000000000001', 'NDA Partners', NOW(), NOW()),
     ('00000000-0000-0000-0000-000000000002', 'Default Organization', NOW(), NOW())
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     updated_at = NOW();
 
@@ -190,13 +190,13 @@ ON CONFLICT (id) DO UPDATE SET
 SELECT 'Schema creation completed successfully' as status;
 
 -- Show created tables
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
 AND table_type = 'BASE TABLE'
 ORDER BY table_name;
 
 -- Show organizations
-SELECT id, name, created_at 
-FROM organizations 
+SELECT id, name, created_at
+FROM organizations
 ORDER BY name;

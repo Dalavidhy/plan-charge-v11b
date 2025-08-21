@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
+
     services:
       postgres:
         image: postgres:15
@@ -62,16 +62,10 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Run linting (flake8)
+      - name: Run pre-commit hooks
         run: |
-          cd backend
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-      - name: Run code formatting check (black)
-        run: |
-          cd backend
-          black --check --diff .
+          pre-commit run --all-files --show-diff-on-failure
+        continue-on-error: false
 
       - name: Run type checking (mypy)
         run: |
@@ -84,7 +78,7 @@ jobs:
           export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
           export REDIS_URL="redis://localhost:6379/0"
           export ENVIRONMENT="test"
-          
+
           # Run database migrations
           alembic upgrade head
 
@@ -109,7 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -160,7 +154,7 @@ jobs:
       security-events: write
       contents: read
       actions: read
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -196,7 +190,7 @@ jobs:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
-    
+
     services:
       postgres:
         image: postgres:15
@@ -282,10 +276,10 @@ jobs:
         run: |
           # Test backend health
           curl -f http://localhost:8000/health
-          
+
           # Test frontend accessibility
           curl -f http://localhost:3000
-          
+
           # Run API tests
           cd backend
           pytest tests/integration/ -v

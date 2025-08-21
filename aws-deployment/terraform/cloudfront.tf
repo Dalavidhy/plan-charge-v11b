@@ -45,7 +45,7 @@ resource "aws_cloudfront_distribution" "main" {
     forwarded_values {
       query_string = false
       headers      = ["Host"]
-      
+
       cookies {
         forward = "none"
       }
@@ -68,7 +68,7 @@ resource "aws_cloudfront_distribution" "main" {
     forwarded_values {
       query_string = true
       headers      = ["Authorization", "Content-Type", "Accept", "Origin", "Referer", "User-Agent"]
-      
+
       cookies {
         forward = "all"
       }
@@ -91,7 +91,7 @@ resource "aws_cloudfront_distribution" "main" {
     forwarded_values {
       query_string = false
       headers      = ["Host"]
-      
+
       cookies {
         forward = "none"
       }
@@ -114,7 +114,7 @@ resource "aws_cloudfront_distribution" "main" {
     forwarded_values {
       query_string = false
       headers      = []
-      
+
       cookies {
         forward = "none"
       }

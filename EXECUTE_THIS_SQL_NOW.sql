@@ -51,11 +51,11 @@ CREATE INDEX IF NOT EXISTS ix_organizations_name ON organizations(name);
 -- ================================================================
 -- Insert required organizations for SSO
 -- ================================================================
-INSERT INTO organizations (id, name, created_at, updated_at) 
-VALUES 
+INSERT INTO organizations (id, name, created_at, updated_at)
+VALUES
     ('00000000-0000-0000-0000-000000000001', 'NDA Partners', NOW(), NOW()),
     ('00000000-0000-0000-0000-000000000002', 'Default Organization', NOW(), NOW())
-ON CONFLICT (id) DO UPDATE SET 
+ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     updated_at = NOW();
 
@@ -85,8 +85,8 @@ CREATE TABLE IF NOT EXISTS alembic_version (
 );
 
 -- Insert current migration version to prevent conflicts
-INSERT INTO alembic_version (version_num) 
-VALUES ('74b7c8174dd8') 
+INSERT INTO alembic_version (version_num)
+VALUES ('74b7c8174dd8')
 ON CONFLICT (version_num) DO NOTHING;
 
 -- ================================================================
@@ -97,11 +97,11 @@ ON CONFLICT (version_num) DO NOTHING;
 SELECT 'SCHEMA CREATION COMPLETED SUCCESSFULLY' as status;
 
 -- Show all created tables
-SELECT table_name, 
-       (SELECT COUNT(*) FROM information_schema.columns 
+SELECT table_name,
+       (SELECT COUNT(*) FROM information_schema.columns
         WHERE table_name = t.table_name AND table_schema = 'public') as column_count
 FROM information_schema.tables t
-WHERE table_schema = 'public' 
+WHERE table_schema = 'public'
 AND table_name IN ('organizations', 'users', 'refresh_tokens', 'alembic_version')
 ORDER BY table_name;
 
@@ -115,8 +115,8 @@ SELECT COUNT(*) as user_count FROM users;
 
 -- Show indexes created
 SELECT 'INDEXES CREATED:' as status;
-SELECT indexname 
-FROM pg_indexes 
+SELECT indexname
+FROM pg_indexes
 WHERE tablename IN ('users', 'organizations', 'refresh_tokens')
 ORDER BY tablename, indexname;
 
@@ -124,7 +124,7 @@ ORDER BY tablename, indexname;
 -- EXPECTED RESULTS:
 -- ================================================================
 -- status: "SCHEMA CREATION COMPLETED SUCCESSFULLY"
--- 
+--
 -- table_name      | column_count
 -- alembic_version | 1
 -- organizations   | 6

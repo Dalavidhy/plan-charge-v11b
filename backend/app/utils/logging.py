@@ -12,7 +12,7 @@ from app.config import settings
 
 def setup_logging() -> None:
     """Configure structured logging."""
-    
+
     # Configure structlog
     structlog.configure(
         processors=[
@@ -32,21 +32,24 @@ def setup_logging() -> None:
                 ]
             ),
             structlog.processors.dict_tracebacks,
-            structlog.processors.JSONRenderer() if settings.LOG_FORMAT == "json"
-            else structlog.dev.ConsoleRenderer(),
+            (
+                structlog.processors.JSONRenderer()
+                if settings.LOG_FORMAT == "json"
+                else structlog.dev.ConsoleRenderer()
+            ),
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-    
+
     # Configure standard logging
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
         level=getattr(logging, settings.LOG_LEVEL.upper()),
     )
-    
+
     # Silence noisy loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)

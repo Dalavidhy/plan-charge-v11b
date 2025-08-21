@@ -100,7 +100,7 @@ export default function DroitsTR() {
             <h2 className="text-xl font-semibold">Calcul automatique des droits TR</h2>
             <p className="text-sm text-muted-foreground">Basé sur les jours ouvrés et les absences Payfit</p>
           </div>
-          
+
           <div className="flex items-center justify-center gap-2">
             <Button
               type="button"
@@ -136,7 +136,7 @@ export default function DroitsTR() {
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               {data && (
@@ -218,7 +218,7 @@ export default function DroitsTR() {
                             <div className="text-sm text-muted-foreground">
                               Jours ouvrés: {employee.working_days} − Absences: {employee.absence_days} = <span className="font-medium">{employee.tr_rights} titres restaurant</span>
                             </div>
-                            
+
                             {employee.absences.length > 0 && (
                               <>
                                 <div className="font-medium mt-3">Absences Payfit du mois</div>
@@ -237,7 +237,7 @@ export default function DroitsTR() {
                                 </ul>
                               </>
                             )}
-                            
+
                             {employee.absences.length === 0 && (
                               <div className="text-sm text-muted-foreground">
                                 Aucune absence ce mois
