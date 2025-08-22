@@ -5,6 +5,8 @@ NOTE: Most async tasks are placeholders for future implementation.
 See tasks_future.py.example for detailed implementation plans.
 """
 
+from typing import Any
+
 from celery import Celery
 
 from app.config import settings
@@ -40,25 +42,25 @@ celery_app.conf.beat_schedule = {}
 
 
 @celery_app.task(name="app.tasks.sync_external_data")
-def sync_external_data():
+def sync_external_data() -> dict[str, str]:
     """Placeholder for external data sync. See tasks_future.py.example for implementation plan."""
     return {"status": "skipped", "message": "Task not yet implemented"}
 
 
 @celery_app.task(name="app.tasks.calculate_utilization")
-def calculate_utilization():
+def calculate_utilization() -> dict[str, str]:
     """Placeholder for utilization calculation. See tasks_future.py.example for implementation plan."""
     return {"status": "skipped", "message": "Task not yet implemented"}
 
 
 @celery_app.task(name="app.tasks.cleanup_old_sessions")
-def cleanup_old_sessions():
+def cleanup_old_sessions() -> dict[str, str]:
     """Placeholder for session cleanup. See tasks_future.py.example for implementation plan."""
     return {"status": "skipped", "message": "Task not yet implemented"}
 
 
 @celery_app.task(name="app.tasks.send_email")
-def send_email(to: str, subject: str, body: str):
+def send_email(to: str, subject: str, body: str) -> dict[str, str]:
     """Placeholder for email sending. See tasks_future.py.example for implementation plan."""
     return {
         "status": "skipped",
@@ -67,7 +69,7 @@ def send_email(to: str, subject: str, body: str):
 
 
 @celery_app.task(name="app.tasks.generate_report")
-def generate_report(report_type: str, params: dict):
+def generate_report(report_type: str, params: dict) -> dict[str, Any]:
     """Placeholder for report generation. See tasks_future.py.example for implementation plan."""
     return {
         "status": "skipped",
@@ -77,7 +79,7 @@ def generate_report(report_type: str, params: dict):
 
 
 @celery_app.task(name="app.tasks.process_bulk_import")
-def process_bulk_import(file_path: str, import_type: str):
+def process_bulk_import(file_path: str, import_type: str) -> dict[str, Any]:
     """Placeholder for bulk import. See tasks_future.py.example for implementation plan."""
     return {
         "status": "skipped",

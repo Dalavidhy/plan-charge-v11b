@@ -85,7 +85,7 @@ class GryzzlyCollaboratorInDB(GryzzlyCollaboratorBase):
     class Config:
         orm_mode = True
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:  # type: ignore
         super().__init__(**data)
         # Calculate full name
         if self.first_name and self.last_name:
@@ -155,7 +155,7 @@ class GryzzlyDeclarationInDB(GryzzlyDeclarationBase):
     class Config:
         orm_mode = True
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:  # type: ignore
         super().__init__(**data)
         # Calculate total cost if billing rate is available
         if self.billing_rate and self.duration_hours:

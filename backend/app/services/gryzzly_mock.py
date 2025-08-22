@@ -12,7 +12,7 @@ from uuid import uuid4
 class GryzzlyMockService:
     """Mock service that simulates Gryzzly API responses"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.collaborators = self._generate_collaborators()
         self.projects = self._generate_projects()
         self.tasks = self._generate_tasks()
@@ -22,7 +22,7 @@ class GryzzlyMockService:
         """Generate a random ID"""
         return "".join(random.choices(string.ascii_lowercase + string.digits, k=24))
 
-    def _generate_collaborators(self, count: int = 15) -> List[Dict]:
+    def _generate_collaborators(self, count: int = 15) -> List[Dict[str, Any]]:
         """Generate mock collaborators"""
         collaborators = []
         departments = [
@@ -100,7 +100,7 @@ class GryzzlyMockService:
 
         return collaborators
 
-    def _generate_projects(self, count: int = 20) -> List[Dict]:
+    def _generate_projects(self, count: int = 20) -> List[Dict[str, Any]]:
         """Generate mock projects"""
         projects = []
         project_types = ["Fixed Price", "Time & Material", "Retainer", "Internal"]
@@ -175,7 +175,7 @@ class GryzzlyMockService:
 
         return projects
 
-    def _generate_tasks(self, count: int = 50) -> List[Dict]:
+    def _generate_tasks(self, count: int = 50) -> List[Dict[str, Any]]:
         """Generate mock tasks"""
         tasks = []
         task_types = [
@@ -234,7 +234,7 @@ class GryzzlyMockService:
 
         return tasks
 
-    def _generate_declarations(self, count: int = 200) -> List[Dict]:
+    def _generate_declarations(self, count: int = 200) -> List[Dict[str, Any]]:
         """Generate mock time declarations"""
         declarations = []
         statuses = ["draft", "submitted", "approved", "rejected"]
@@ -305,44 +305,46 @@ class GryzzlyMockService:
         """Test connection (always returns True for mock)"""
         return True
 
-    async def get_collaborators(self, active_only: bool = False) -> List[Dict]:
+    async def get_collaborators(
+        self, active_only: bool = False
+    ) -> List[Dict[str, Any]]:
         """Get mock collaborators"""
         if active_only:
             return [c for c in self.collaborators if c["isActive"]]
         return self.collaborators
 
-    async def get_collaborator(self, collaborator_id: str) -> Dict:
+    async def get_collaborator(self, collaborator_id: str) -> Dict[str, Any]:
         """Get single collaborator"""
         for c in self.collaborators:
             if c["id"] == collaborator_id:
                 return c
         raise Exception(f"Collaborator {collaborator_id} not found")
 
-    async def get_projects(self, active_only: bool = False) -> List[Dict]:
+    async def get_projects(self, active_only: bool = False) -> List[Dict[str, Any]]:
         """Get mock projects"""
         if active_only:
             return [p for p in self.projects if p["isActive"]]
         return self.projects
 
-    async def get_project(self, project_id: str) -> Dict:
+    async def get_project(self, project_id: str) -> Dict[str, Any]:
         """Get single project"""
         for p in self.projects:
             if p["id"] == project_id:
                 return p
         raise Exception(f"Project {project_id} not found")
 
-    async def get_project_collaborators(self, project_id: str) -> List[Dict]:
+    async def get_project_collaborators(self, project_id: str) -> List[Dict[str, Any]]:
         """Get collaborators assigned to a project"""
         # Return a random subset of collaborators
         return random.sample(self.collaborators, min(5, len(self.collaborators)))
 
-    async def get_tasks(self, project_id: Optional[str] = None) -> List[Dict]:
+    async def get_tasks(self, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get mock tasks"""
         if project_id:
             return [t for t in self.tasks if t["projectId"] == project_id]
         return self.tasks
 
-    async def get_task(self, task_id: str) -> Dict:
+    async def get_task(self, task_id: str) -> Dict[str, Any]:
         """Get single task"""
         for t in self.tasks:
             if t["id"] == task_id:
@@ -356,7 +358,7 @@ class GryzzlyMockService:
         collaborator_id: Optional[str] = None,
         project_id: Optional[str] = None,
         status: Optional[str] = None,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         """Get mock declarations with filters"""
         result = self.declarations.copy()
 
@@ -373,7 +375,7 @@ class GryzzlyMockService:
 
         return result
 
-    async def get_declaration(self, declaration_id: str) -> Dict:
+    async def get_declaration(self, declaration_id: str) -> Dict[str, Any]:
         """Get single declaration"""
         for d in self.declarations:
             if d["id"] == declaration_id:
@@ -388,7 +390,7 @@ class GryzzlyMockService:
         date: date,
         hours: float,
         description: Optional[str] = None,
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Create a new declaration"""
         new_declaration = {
             "id": self._generate_id(),
@@ -415,7 +417,7 @@ class GryzzlyMockService:
         hours: Optional[float] = None,
         description: Optional[str] = None,
         status: Optional[str] = None,
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Update a declaration"""
         for d in self.declarations:
             if d["id"] == declaration_id:
@@ -438,7 +440,7 @@ class GryzzlyMockService:
         self.declarations = [d for d in self.declarations if d["id"] != declaration_id]
         return True
 
-    async def get_sync_status(self) -> Dict:
+    async def get_sync_status(self) -> Dict[str, Any]:
         """Get sync status"""
         return {
             "lastSync": datetime.now().isoformat(),
@@ -451,7 +453,7 @@ class GryzzlyMockService:
             },
         }
 
-    async def trigger_sync(self, sync_type: str = "full") -> Dict:
+    async def trigger_sync(self, sync_type: str = "full") -> Dict[str, Any]:
         """Trigger sync (simulated)"""
         return {
             "status": "success",
@@ -477,7 +479,7 @@ class GryzzlyMockService:
 
     async def get_time_report(
         self, start_date: date, end_date: date, group_by: str = "project"
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Get time report"""
         declarations = await self.get_declarations(
             start_date=start_date, end_date=end_date
@@ -509,7 +511,7 @@ class GryzzlyMockService:
 
     async def get_billing_report(
         self, start_date: date, end_date: date, project_id: Optional[str] = None
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Get billing report"""
         declarations = await self.get_declarations(
             start_date=start_date, end_date=end_date, project_id=project_id
@@ -533,7 +535,7 @@ class GryzzlyMockService:
             "averageRate": total_amount / total_hours if total_hours > 0 else 0,
         }
 
-    async def search_collaborators(self, query: str) -> List[Dict]:
+    async def search_collaborators(self, query: str) -> List[Dict[str, Any]]:
         """Search collaborators"""
         query_lower = query.lower()
         return [
@@ -544,7 +546,7 @@ class GryzzlyMockService:
             or query_lower in c["lastName"].lower()
         ]
 
-    async def search_projects(self, query: str) -> List[Dict]:
+    async def search_projects(self, query: str) -> List[Dict[str, Any]]:
         """Search projects"""
         query_lower = query.lower()
         return [
@@ -556,7 +558,7 @@ class GryzzlyMockService:
 
     async def get_activity_summary(
         self, collaborator_id: str, start_date: date, end_date: date
-    ) -> Dict:
+    ) -> Dict[str, Any]:
         """Get activity summary for a collaborator"""
         declarations = await self.get_declarations(
             collaborator_id=collaborator_id, start_date=start_date, end_date=end_date
