@@ -10,25 +10,40 @@ from sqlalchemy.pool import NullPool
 from app.config import settings
 
 # Create async engine
-async_engine = create_async_engine(
-    str(settings.DATABASE_URL),
-    echo=settings.DATABASE_ECHO,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_timeout=settings.DATABASE_POOL_TIMEOUT,
-    pool_pre_ping=True,
-    poolclass=NullPool if settings.is_testing else None,
-)
+if settings.is_testing:
+    async_engine = create_async_engine(
+        str(settings.DATABASE_URL),
+        echo=settings.DATABASE_ECHO,
+        pool_pre_ping=True,
+        poolclass=NullPool,
+    )
+else:
+    async_engine = create_async_engine(
+        str(settings.DATABASE_URL),
+        echo=settings.DATABASE_ECHO,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+        pool_pre_ping=True,
+    )
 
 # Create sync engine for migrations and scripts
-sync_engine = create_engine(
-    settings.database_url_sync,
-    echo=settings.DATABASE_ECHO,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_timeout=settings.DATABASE_POOL_TIMEOUT,
-    pool_pre_ping=True,
-)
+if settings.is_testing:
+    sync_engine = create_engine(
+        settings.database_url_sync,
+        echo=settings.DATABASE_ECHO,
+        pool_pre_ping=True,
+        poolclass=NullPool,
+    )
+else:
+    sync_engine = create_engine(
+        settings.database_url_sync,
+        echo=settings.DATABASE_ECHO,
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+        pool_pre_ping=True,
+    )
 
 # Session factories
 AsyncSessionLocal = async_sessionmaker(
