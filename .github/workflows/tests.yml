@@ -84,6 +84,10 @@ jobs:
           JWT_ALGORITHM: HS256
           SECRET_KEY: test-secret-key-for-testing-only
         run: |
+          # Enable required PostgreSQL extensions
+          PGPASSWORD=postgres psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS citext;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+          
           cd backend
           # Create database tables using Python instead of alembic for tests
           python -c "
@@ -269,6 +273,10 @@ jobs:
           JWT_SECRET_KEY: test-secret-key-for-integration-testing
           JWT_ALGORITHM: HS256
         run: |
+          # Enable required PostgreSQL extensions
+          PGPASSWORD=postgres psql -h localhost -U postgres -d integration_test_db -c "CREATE EXTENSION IF NOT EXISTS citext;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d integration_test_db -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+          
           cd backend
           # Create database tables using Python instead of alembic for tests
           python -c "
