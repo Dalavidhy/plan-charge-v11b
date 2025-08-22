@@ -18,6 +18,7 @@ from app.utils.security import get_password_hash
 # Override settings for testing
 settings.ENVIRONMENT = "testing"
 settings.RATE_LIMIT_ENABLED = False
+settings.SSO_MANDATORY = False  # Allow direct login in tests
 
 # Test database engine
 test_engine = create_async_engine(
