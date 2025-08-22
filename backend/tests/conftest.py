@@ -17,7 +17,6 @@ from app.utils.security import get_password_hash
 
 # Override settings for testing
 settings.ENVIRONMENT = "testing"
-settings.DATABASE_URL = "postgresql+asyncpg://plancharge_test:plancharge_test@localhost:5433/plancharge_test"
 settings.RATE_LIMIT_ENABLED = False
 
 # Test database engine
