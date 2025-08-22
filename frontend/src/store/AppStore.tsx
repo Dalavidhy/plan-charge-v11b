@@ -228,7 +228,9 @@ export const AppStoreProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) return JSON.parse(stored) as AppState;
-    } catch {}
+    } catch (error) {
+      logger.warn('Failed to load stored app state:', error);
+    }
     return init;
   });
 
