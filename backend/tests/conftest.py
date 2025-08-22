@@ -47,8 +47,9 @@ def event_loop() -> Generator:
 async def async_session() -> AsyncGenerator[AsyncSession, None]:
     """Get async test database session."""
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+        # Use checkfirst to avoid "already exists" errors
+        await conn.run_sync(Base.metadata.drop_all, checkfirst=True)
+        await conn.run_sync(Base.metadata.create_all, checkfirst=True)
 
     async with TestSessionLocal() as session:
         yield session
