@@ -3,9 +3,8 @@ Forecast model for plan de charge predictions
 """
 
 import uuid
-from datetime import datetime
 
-from sqlalchemy import Column, Date, DateTime, Float, ForeignKey, Index, String, Text
+from sqlalchemy import Column, Date, Float, ForeignKey, Index, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -36,7 +35,7 @@ class Forecast(BaseModel):
     task_id = Column(UUID(as_uuid=True), ForeignKey("gryzzly_tasks.id"), nullable=True)
 
     # When
-    date = Column(Date, nullable=False, index=True)
+    date = Column(Date, nullable=False)
 
     # How many hours
     hours = Column(Float, nullable=False)
@@ -59,4 +58,7 @@ class Forecast(BaseModel):
     modifier = relationship("User", foreign_keys=[modified_by])
 
     def __repr__(self) -> str:
-        return f"<Forecast(id={self.id}, collaborator_id={self.collaborator_id}, date={self.date}, hours={self.hours})>"
+        return (
+            f"<Forecast(id={self.id}, collaborator_id={self.collaborator_id}, "
+            f"date={self.date}, hours={self.hours})>"
+        )
