@@ -74,20 +74,29 @@ jobs:
         continue-on-error: true
 
       - name: Setup test environment
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret-key-for-testing-only-not-for-production
+          JWT_ALGORITHM: HS256
+          SECRET_KEY: test-secret-key-for-testing-only
         run: |
           cd backend
-          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
-          export REDIS_URL="redis://localhost:6379/0"
-          export ENVIRONMENT="test"
-
           # Run database migrations
           alembic upgrade head
 
       - name: Run backend tests
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret-key-for-testing-only-not-for-production
+          JWT_ALGORITHM: HS256
           SECRET_KEY: test-secret-key-for-testing-only
         run: |
           cd backend
@@ -247,16 +256,26 @@ jobs:
 
       - name: Setup test database
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/integration_test_db
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/integration_test_db
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret-key-for-integration-testing
+          JWT_ALGORITHM: HS256
         run: |
           cd backend
           alembic upgrade head
 
       - name: Start backend server
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/integration_test_db
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/integration_test_db
           REDIS_URL: redis://localhost:6379/0
-          ENVIRONMENT: test
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret-key-for-integration-testing
+          JWT_ALGORITHM: HS256
           SECRET_KEY: test-secret-key-for-integration-testing
         run: |
           cd backend
