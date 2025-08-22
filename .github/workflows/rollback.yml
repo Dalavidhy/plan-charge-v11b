@@ -1,0 +1,325 @@
+name: Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to rollback'
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      target_version:
+        description: 'Target version to rollback to (optional - will use previous version if not specified)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+env:
+  AWS_REGION: eu-west-3
+
+jobs:
+  validate-rollback:
+    name: 🔍 Validate Rollback Request
+    runs-on: ubuntu-latest
+    outputs:
+      backend-version: ${{ steps.versions.outputs.backend }}
+      frontend-version: ${{ steps.versions.outputs.frontend }}
+      proceed: ${{ steps.validate.outputs.proceed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get current and target versions
+        id: versions
+        run: |
+          echo "🔍 Determining rollback versions..."
+          
+          # Get current backend version if needed
+          if [ "${{ github.event.inputs.component }}" == "backend" ] || [ "${{ github.event.inputs.component }}" == "both" ]; then
+            CURRENT_TASK_DEF=$(aws ecs describe-services \
+              --cluster plan-charge-${{ github.event.inputs.environment }}-cluster \
+              --services plan-charge-${{ github.event.inputs.environment }}-backend \
+              --query 'services[0].taskDefinition' --output text)
+            
+            echo "Current backend task definition: $CURRENT_TASK_DEF"
+            
+            if [ -n "${{ github.event.inputs.target_version }}" ]; then
+              BACKEND_TARGET="${{ github.event.inputs.target_version }}"
+            else
+              # Get previous version from task definition family
+              FAMILY=$(echo $CURRENT_TASK_DEF | cut -d'/' -f2 | cut -d':' -f1)
+              CURRENT_REVISION=$(echo $CURRENT_TASK_DEF | cut -d':' -f3)
+              PREVIOUS_REVISION=$((CURRENT_REVISION - 1))
+              BACKEND_TARGET="$FAMILY:$PREVIOUS_REVISION"
+            fi
+            
+            echo "backend=$BACKEND_TARGET" >> $GITHUB_OUTPUT
+            echo "Backend rollback target: $BACKEND_TARGET"
+          fi
+          
+          # Get current frontend version if needed
+          if [ "${{ github.event.inputs.component }}" == "frontend" ] || [ "${{ github.event.inputs.component }}" == "both" ]; then
+            if [ -n "${{ github.event.inputs.target_version }}" ]; then
+              FRONTEND_TARGET="${{ github.event.inputs.target_version }}"
+            else
+              # For frontend, we'll use the previous GitHub release
+              FRONTEND_TARGET=$(gh release list --limit 2 --json tagName --jq '.[1].tagName' || echo "previous")
+            fi
+            
+            echo "frontend=$FRONTEND_TARGET" >> $GITHUB_OUTPUT
+            echo "Frontend rollback target: $FRONTEND_TARGET"
+          fi
+
+      - name: Validate rollback safety
+        id: validate
+        run: |
+          echo "🛡️ Validating rollback safety..."
+          
+          # Basic validation
+          if [ -z "${{ github.event.inputs.reason }}" ]; then
+            echo "❌ Rollback reason is required"
+            echo "proceed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Environment validation
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            echo "⚠️ Production rollback requested - requires manual approval"
+          fi
+          
+          echo "✅ Rollback validation passed"
+          echo "proceed=true" >> $GITHUB_OUTPUT
+
+  rollback-backend:
+    name: ↩️ Rollback Backend
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: needs.validate-rollback.outputs.proceed == 'true' && (github.event.inputs.component == 'backend' || github.event.inputs.component == 'both')
+    environment: 
+      name: ${{ github.event.inputs.environment }}-rollback
+      url: https://plan-de-charge.aws.nda-partners.com
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Rollback ECS service
+        env:
+          TARGET_VERSION: ${{ needs.validate-rollback.outputs.backend-version }}
+        run: |
+          echo "↩️ Rolling back backend to: $TARGET_VERSION"
+          
+          # Update ECS service to use target task definition
+          aws ecs update-service \
+            --cluster plan-charge-${{ github.event.inputs.environment }}-cluster \
+            --service plan-charge-${{ github.event.inputs.environment }}-backend \
+            --task-definition $TARGET_VERSION \
+            --force-new-deployment
+          
+          echo "⏳ Waiting for service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster plan-charge-${{ github.event.inputs.environment }}-cluster \
+            --services plan-charge-${{ github.event.inputs.environment }}-backend \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ Backend rollback completed"
+
+      - name: Verify backend rollback
+        run: |
+          echo "🔍 Verifying backend rollback..."
+          
+          # Test health endpoint
+          HEALTH_URL="https://plan-de-charge.aws.nda-partners.com/health"
+          
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Backend health check passed after rollback"
+              break
+            else
+              echo "⚠️ Backend health check failed: $STATUS (attempt $i/5)"
+              if [ $i -eq 5 ]; then
+                echo "❌ Backend rollback verification failed"
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+
+  rollback-frontend:
+    name: ↩️ Rollback Frontend
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: needs.validate-rollback.outputs.proceed == 'true' && (github.event.inputs.component == 'frontend' || github.event.inputs.component == 'both')
+    environment: 
+      name: ${{ github.event.inputs.environment }}-rollback
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-rollback.outputs.frontend-version }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build and deploy previous frontend version
+        env:
+          TARGET_VERSION: ${{ needs.validate-rollback.outputs.frontend-version }}
+        run: |
+          echo "↩️ Rolling back frontend to: $TARGET_VERSION"
+          
+          cd frontend
+          npm ci
+          
+          # Set build environment variables
+          export VITE_API_URL=https://plan-de-charge.aws.nda-partners.com
+          export VITE_ENVIRONMENT=${{ github.event.inputs.environment }}
+          export VITE_VERSION=$TARGET_VERSION
+          
+          # Build
+          npm run build
+          
+          # Deploy to S3
+          aws s3 sync dist/ s3://plan-charge-${{ github.event.inputs.environment }}-frontend/ \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "service-worker.js"
+          
+          # Upload HTML files with no cache
+          aws s3 sync dist/ s3://plan-charge-${{ github.event.inputs.environment }}-frontend/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --include "*.html" \
+            --include "service-worker.js"
+          
+          # Invalidate CloudFront
+          if [ "${{ github.event.inputs.environment }}" == "production" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PROD }} \
+              --paths "/*"
+          fi
+          
+          echo "✅ Frontend rollback completed"
+
+      - name: Verify frontend rollback
+        run: |
+          echo "🔍 Verifying frontend rollback..."
+          
+          # Wait for CloudFront invalidation
+          sleep 30
+          
+          # Test frontend accessibility
+          FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
+          
+          for i in {1..3}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Frontend accessibility verified after rollback"
+              break
+            else
+              echo "⚠️ Frontend accessibility failed: $STATUS (attempt $i/3)"
+              if [ $i -eq 3 ]; then
+                echo "❌ Frontend rollback verification failed"
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+
+  post-rollback:
+    name: 📋 Post-Rollback Actions
+    runs-on: ubuntu-latest
+    needs: [validate-rollback, rollback-backend, rollback-frontend]
+    if: always() && needs.validate-rollback.outputs.proceed == 'true'
+
+    steps:
+      - name: Create rollback summary
+        run: |
+          echo "## ↩️ Emergency Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Component(s)**: ${{ github.event.inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason**: ${{ github.event.inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Initiated by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.inputs.component }}" == "backend" ] || [ "${{ github.event.inputs.component }}" == "both" ]; then
+            echo "- **Backend Status**: ${{ needs.rollback-backend.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Backend Version**: ${{ needs.validate-rollback.outputs.backend-version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ github.event.inputs.component }}" == "frontend" ] || [ "${{ github.event.inputs.component }}" == "both" ]; then
+            echo "- **Frontend Status**: ${{ needs.rollback-frontend.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Frontend Version**: ${{ needs.validate-rollback.outputs.frontend-version }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create rollback issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const rollbackSummary = `
+            ## 🚨 Emergency Rollback Executed
+            
+            **Details:**
+            - **Component(s)**: ${{ github.event.inputs.component }}
+            - **Environment**: ${{ github.event.inputs.environment }}
+            - **Reason**: ${{ github.event.inputs.reason }}
+            - **Initiated by**: ${{ github.actor }}
+            - **Timestamp**: ${new Date().toISOString()}
+            
+            **Status:**
+            - Backend: ${{ needs.rollback-backend.result || 'N/A' }}
+            - Frontend: ${{ needs.rollback-frontend.result || 'N/A' }}
+            
+            **Next Steps:**
+            1. Investigate the root cause of the issue
+            2. Fix the underlying problem
+            3. Test the fix thoroughly
+            4. Redeploy when ready
+            
+            **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Emergency Rollback: ${context.payload.inputs.component} in ${context.payload.inputs.environment}`,
+              body: rollbackSummary,
+              labels: ['rollback', 'incident', context.payload.inputs.environment]
+            });

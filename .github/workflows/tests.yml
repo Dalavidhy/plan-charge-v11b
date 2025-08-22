@@ -64,6 +64,7 @@ jobs:
 
       - name: Run pre-commit hooks
         run: |
+          cd backend
           pre-commit run --all-files --show-diff-on-failure
         continue-on-error: false
 

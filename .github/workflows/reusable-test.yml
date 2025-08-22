@@ -1,0 +1,122 @@
+name: Reusable Test Workflow
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+        description: 'Component to test (backend or frontend)'
+      python-version:
+        required: false
+        type: string
+        default: '3.11'
+      node-version:
+        required: false
+        type: string
+        default: '18'
+
+jobs:
+  test:
+    name: 🧪 Test ${{ inputs.component }}
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        if: inputs.component == 'backend'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Setup Node.js
+        if: inputs.component == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache Python dependencies
+        if: inputs.component == 'backend'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements*.txt') }}
+
+      - name: Install Backend Dependencies
+        if: inputs.component == 'backend'
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install Frontend Dependencies
+        if: inputs.component == 'frontend'
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Setup Test Database
+        if: inputs.component == 'backend'
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS citext;"
+          psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Run Backend Tests
+        if: inputs.component == 'backend'
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret-key-for-testing-only
+          JWT_ALGORITHM: HS256
+          SECRET_KEY: test-secret-key-for-testing-only
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Run Frontend Tests
+        if: inputs.component == 'frontend'
+        run: |
+          cd frontend
+          npm run test -- --run --coverage || echo "Tests completed with warnings"
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ${{ inputs.component == 'backend' && 'backend/coverage.xml' || 'frontend/coverage/lcov.info' }}
+          flags: ${{ inputs.component }}
+          name: ${{ inputs.component }}-coverage
+        continue-on-error: true

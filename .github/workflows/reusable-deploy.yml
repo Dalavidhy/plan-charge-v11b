@@ -1,0 +1,191 @@
+name: Reusable Deploy Workflow
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+        description: 'Component to deploy (backend or frontend)'
+      environment:
+        required: true
+        type: string
+        description: 'Target environment (production or staging)'
+      version:
+        required: true
+        type: string
+        description: 'Version tag for the deployment'
+      aws-region:
+        required: false
+        type: string
+        default: 'eu-west-3'
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      CLOUDFRONT_DISTRIBUTION_ID:
+        required: false
+
+jobs:
+  deploy:
+    name: 🚀 Deploy ${{ inputs.component }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: 
+      name: ${{ inputs.environment }}
+      url: ${{ inputs.environment == 'production' && 'https://plan-de-charge.aws.nda-partners.com' || 'https://staging.plan-de-charge.aws.nda-partners.com' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Login to Amazon ECR
+        if: inputs.component == 'backend'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy Backend to ECS
+        if: inputs.component == 'backend'
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: plan-charge-backend
+          IMAGE_TAG: ${{ inputs.version }}
+          ECS_CLUSTER: plan-charge-${{ inputs.environment }}-cluster
+          ECS_SERVICE: plan-charge-${{ inputs.environment }}-backend
+        run: |
+          echo "🚀 Deploying backend to ECS..."
+          
+          # Download current task definition
+          aws ecs describe-task-definition \
+            --task-definition $ECS_SERVICE \
+            --query taskDefinition > task-definition.json
+
+          # Update task definition with new image
+          NEW_IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          cat task-definition.json | jq --arg IMAGE "$NEW_IMAGE" '.containerDefinitions[0].image = $IMAGE' > new-task-definition.json
+
+          # Register new task definition
+          NEW_TASK_DEF=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "📋 New task definition: $NEW_TASK_DEF"
+
+          # Update service
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition $NEW_TASK_DEF \
+            --force-new-deployment
+
+          echo "✅ Backend deployment initiated"
+
+      - name: Setup Node.js for Frontend
+        if: inputs.component == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build and Deploy Frontend
+        if: inputs.component == 'frontend'
+        env:
+          S3_BUCKET: plan-charge-${{ inputs.environment }}-frontend
+          DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+          API_URL: ${{ inputs.environment == 'production' && 'https://plan-de-charge.aws.nda-partners.com' || 'https://staging.plan-de-charge.aws.nda-partners.com' }}
+        run: |
+          echo "🎨 Building and deploying frontend..."
+          
+          cd frontend
+          npm ci
+          
+          # Set build environment variables
+          export VITE_API_URL=$API_URL
+          export VITE_ENVIRONMENT=${{ inputs.environment }}
+          export VITE_VERSION=${{ inputs.version }}
+          
+          # Build
+          npm run build
+          
+          # Deploy to S3
+          aws s3 sync dist/ s3://$S3_BUCKET/ \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "service-worker.js"
+          
+          # Upload HTML files with no cache
+          aws s3 sync dist/ s3://$S3_BUCKET/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --include "*.html" \
+            --include "service-worker.js"
+          
+          # Invalidate CloudFront if distribution ID is provided
+          if [ ! -z "$DISTRIBUTION_ID" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id $DISTRIBUTION_ID \
+              --paths "/*"
+            echo "🔄 CloudFront invalidation initiated"
+          fi
+          
+          echo "✅ Frontend deployment completed"
+
+      - name: Verify Deployment
+        env:
+          BASE_URL: ${{ inputs.environment == 'production' && 'https://plan-de-charge.aws.nda-partners.com' || 'https://staging.plan-de-charge.aws.nda-partners.com' }}
+        run: |
+          echo "🏥 Verifying deployment..."
+          
+          # Wait for services to stabilize if backend
+          if [ "${{ inputs.component }}" == "backend" ]; then
+            echo "⏳ Waiting for ECS service to stabilize..."
+            aws ecs wait services-stable \
+              --cluster plan-charge-${{ inputs.environment }}-cluster \
+              --services plan-charge-${{ inputs.environment }}-backend \
+              --region ${{ inputs.aws-region }} || echo "⚠️ ECS service stabilization timeout"
+          fi
+          
+          # Test application health
+          echo "🔗 Testing application health..."
+          HEALTH_URL="$BASE_URL/health"
+          
+          for i in {1..5}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed (attempt $i/5)"
+              break
+            else
+              echo "⚠️ Health check failed with status $STATUS (attempt $i/5)"
+              if [ $i -eq 5 ]; then
+                echo "❌ Health check failed after 5 attempts"
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+          
+          # Test Frontend if frontend deployment
+          if [ "${{ inputs.component }}" == "frontend" ]; then
+            FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL")
+            if [ "$FRONTEND_STATUS" = "200" ]; then
+              echo "✅ Frontend accessibility verified"
+            else
+              echo "❌ Frontend accessibility failed: $FRONTEND_STATUS"
+              exit 1
+            fi
+          fi
+
+      - name: Create Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 ${{ inputs.component }} Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Component**: ${{ inputs.component }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ inputs.environment == 'production' && 'https://plan-de-charge.aws.nda-partners.com' || 'https://staging.plan-de-charge.aws.nda-partners.com' }}" >> $GITHUB_STEP_SUMMARY

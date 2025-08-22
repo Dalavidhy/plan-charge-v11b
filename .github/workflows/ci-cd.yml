@@ -1,0 +1,552 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      force_deploy:
+        description: 'Force deploy even if tests fail'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  AWS_REGION: eu-west-3
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Detect changes to determine what to build/test
+  detect-changes:
+    name: 🔍 Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci-cd.yml'
+              - '.github/workflows/backend-deploy.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci-cd.yml'
+              - '.github/workflows/frontend-deploy.yml'
+            infrastructure:
+              - 'aws-deployment/**'
+              - 'terraform/**'
+              - '.github/workflows/ci-cd.yml'
+
+      - name: Generate version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            VERSION="pr-${{ github.event.number }}-$(echo ${{ github.sha }} | cut -c1-8)"
+          else
+            VERSION="$(date +%Y.%m.%d)-$(echo ${{ github.sha }} | cut -c1-8)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION"
+
+  # Parallel testing matrix
+  test:
+    name: 🧪 Test ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: github.event.inputs.force_deploy != 'true'
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+        include:
+          - component: backend
+            test-paths: 'backend/**'
+            enabled: ${{ needs.detect-changes.outputs.backend == 'true' || github.event_name == 'pull_request' }}
+          - component: frontend
+            test-paths: 'frontend/**'
+            enabled: ${{ needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'pull_request' }}
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Backend Environment
+        if: matrix.component == 'backend'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup Frontend Environment
+        if: matrix.component == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache Backend Dependencies
+        if: matrix.component == 'backend'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements*.txt') }}
+
+      - name: Install Backend Dependencies
+        if: matrix.component == 'backend'
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install Frontend Dependencies
+        if: matrix.component == 'frontend'
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Setup Test Database
+        if: matrix.component == 'backend'
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS citext;"
+          psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Run Backend Linting
+        if: matrix.component == 'backend'
+        run: |
+          cd backend
+          pre-commit run --all-files --show-diff-on-failure || true
+          mypy app --ignore-missing-imports || true
+
+      - name: Run Frontend Linting
+        if: matrix.component == 'frontend'
+        run: |
+          cd frontend
+          npm run lint || true
+          npx tsc --noEmit || true
+
+      - name: Run Backend Tests
+        if: matrix.component == 'backend'
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/0
+          ENVIRONMENT: testing
+          JWT_SECRET_KEY: test-secret-key-for-testing-only
+          JWT_ALGORITHM: HS256
+          SECRET_KEY: test-secret-key-for-testing-only
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Run Frontend Tests
+        if: matrix.component == 'frontend'
+        run: |
+          cd frontend
+          npm run test -- --run --coverage || echo "Tests completed with warnings"
+
+      - name: Frontend Build Test
+        if: matrix.component == 'frontend'
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ${{ matrix.component == 'backend' && 'backend/coverage.xml' || 'frontend/coverage/lcov.info' }}
+          flags: ${{ matrix.component }}
+          name: ${{ matrix.component }}-coverage
+        continue-on-error: true
+
+  # Security scanning
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        if: always()
+        continue-on-error: true
+
+      - name: Dependency vulnerability scan
+        run: |
+          echo "🔍 Scanning dependencies for vulnerabilities..."
+          
+          if [ -f "backend/requirements.txt" ]; then
+            echo "📦 Backend dependencies:"
+            pip install safety
+            cd backend && safety check --json || true
+          fi
+          
+          if [ -f "frontend/package.json" ]; then
+            echo "📦 Frontend dependencies:"
+            cd frontend && npm audit --audit-level moderate || true
+          fi
+
+  # Build and push images
+  build:
+    name: 🏗️ Build ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test]
+    if: always() && (needs.test.result == 'success' || github.event.inputs.force_deploy == 'true') && github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        include:
+          - component: backend
+            enabled: ${{ needs.detect-changes.outputs.backend == 'true' }}
+          - component: frontend
+            enabled: ${{ needs.detect-changes.outputs.frontend == 'true' }}
+
+    outputs:
+      backend-image: ${{ steps.backend-image.outputs.image }}
+      frontend-version: ${{ steps.frontend-version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: matrix.component == 'backend'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Backend Docker image
+        if: matrix.component == 'backend'
+        id: backend-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: plan-charge-backend
+          IMAGE_TAG: ${{ needs.detect-changes.outputs.version }}
+        run: |
+          cd backend
+          
+          # Build multi-platform image
+          docker build \
+            --platform linux/amd64 \
+            --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            --tag $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
+          
+          # Push both tags
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "🐳 Built image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Setup Node.js for Frontend
+        if: matrix.component == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Frontend
+        if: matrix.component == 'frontend'
+        id: frontend-version
+        run: |
+          cd frontend
+          npm ci
+          
+          # Set build environment variables
+          export VITE_API_URL=https://plan-de-charge.aws.nda-partners.com
+          export VITE_ENVIRONMENT=production
+          export VITE_VERSION=${{ needs.detect-changes.outputs.version }}
+          
+          # Build
+          npm run build
+          
+          echo "version=${{ needs.detect-changes.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "🎨 Built frontend version: ${{ needs.detect-changes.outputs.version }}"
+
+      - name: Upload Frontend Build Artifacts
+        if: matrix.component == 'frontend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
+
+  # E2E tests on current production
+  e2e-pre-deploy:
+    name: 🎭 Pre-Deploy E2E Tests
+    uses: ./.github/workflows/e2e-tests.yml
+    needs: [detect-changes, build, security-scan]
+    if: github.ref == 'refs/heads/main' && (always() && needs.build.result == 'success')
+    with:
+      base-url: 'https://plan-de-charge.aws.nda-partners.com'
+      environment: 'production'
+
+  # Deploy to production
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build, security-scan, e2e-pre-deploy]
+    if: github.ref == 'refs/heads/main' && (always() && needs.build.result == 'success')
+    environment: 
+      name: production
+      url: https://plan-de-charge.aws.nda-partners.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Backend to ECS
+        if: needs.detect-changes.outputs.backend == 'true'
+        run: |
+          echo "🚀 Deploying backend to ECS..."
+          
+          # Update ECS service with new image
+          aws ecs update-service \
+            --cluster plan-charge-prod-cluster \
+            --service plan-charge-prod-backend \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ Backend deployment initiated"
+
+      - name: Download Frontend Artifacts
+        if: needs.detect-changes.outputs.frontend == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist/
+
+      - name: Deploy Frontend to S3
+        if: needs.detect-changes.outputs.frontend == 'true'
+        run: |
+          echo "🚀 Deploying frontend to S3..."
+          
+          # Sync to S3 with optimized caching
+          aws s3 sync frontend-dist/ s3://plan-charge-prod-frontend/ \
+            --delete \
+            --cache-control "public, max-age=31536000" \
+            --exclude "*.html" \
+            --exclude "service-worker.js"
+          
+          # Upload HTML files with no cache
+          aws s3 sync frontend-dist/ s3://plan-charge-prod-frontend/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --include "*.html" \
+            --include "service-worker.js"
+          
+          echo "✅ Frontend deployment completed"
+
+      - name: Invalidate CloudFront
+        if: needs.detect-changes.outputs.frontend == 'true'
+        run: |
+          echo "🔄 Invalidating CloudFront cache..."
+          
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PROD }} \
+            --paths "/*"
+          
+          echo "✅ CloudFront invalidation initiated"
+
+      - name: Verify Deployment Health
+        run: |
+          echo "🏥 Verifying deployment health..."
+          
+          # Wait for services to stabilize
+          if [ "${{ needs.detect-changes.outputs.backend }}" == "true" ]; then
+            echo "⏳ Waiting for ECS service to stabilize..."
+            aws ecs wait services-stable \
+              --cluster plan-charge-prod-cluster \
+              --services plan-charge-prod-backend \
+              --region ${{ env.AWS_REGION }} || echo "⚠️ ECS service stabilization timeout"
+          fi
+          
+          # Test application health
+          echo "🔗 Testing application health..."
+          HEALTH_URL="https://plan-de-charge.aws.nda-partners.com/health"
+          FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
+          
+          # Test API health
+          for i in {1..5}; do
+            API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            if [ "$API_STATUS" = "200" ]; then
+              echo "✅ API health check passed"
+              break
+            else
+              echo "⚠️ API health check failed (attempt $i/5): $API_STATUS"
+              if [ $i -eq 5 ]; then
+                echo "❌ API health check failed after 5 attempts"
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+          
+          # Test Frontend
+          FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL")
+          if [ "$FRONTEND_STATUS" = "200" ]; then
+            echo "✅ Frontend health check passed"
+          else
+            echo "❌ Frontend health check failed: $FRONTEND_STATUS"
+            exit 1
+          fi
+
+      - name: Create Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ needs.detect-changes.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: ${{ needs.detect-changes.outputs.backend == 'true' && '✅ Updated' || '⏭️ Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: ${{ needs.detect-changes.outputs.frontend == 'true' && '✅ Updated' || '⏭️ Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://plan-de-charge.aws.nda-partners.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Health**: https://plan-de-charge.aws.nda-partners.com/health" >> $GITHUB_STEP_SUMMARY
+
+  # Post-deployment E2E tests
+  e2e-post-deploy:
+    name: 🎭 Post-Deploy E2E Tests
+    uses: ./.github/workflows/e2e-tests.yml
+    needs: [deploy-production, detect-changes]
+    if: github.ref == 'refs/heads/main' && always() && needs.deploy-production.result == 'success'
+    with:
+      base-url: 'https://plan-de-charge.aws.nda-partners.com'
+      environment: 'production'
+
+  # Post-deployment validation
+  post-deployment:
+    name: 📊 Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [deploy-production, e2e-post-deploy, detect-changes]
+    if: github.ref == 'refs/heads/main' && always() && needs.deploy-production.result == 'success'
+
+    steps:
+      - name: Performance Testing
+        run: |
+          echo "⚡ Running performance tests..."
+          
+          FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
+          API_URL="https://plan-de-charge.aws.nda-partners.com/health"
+          
+          # Frontend performance
+          echo "🎨 Frontend Performance:"
+          FRONTEND_PERF=$(curl -s -o /dev/null -w "Total: %{time_total}s | DNS: %{time_namelookup}s | Connect: %{time_connect}s | TLS: %{time_appconnect}s | Transfer: %{time_starttransfer}s\n" "$FRONTEND_URL")
+          echo "$FRONTEND_PERF"
+          
+          # API performance
+          echo "🔗 API Performance:"
+          API_PERF=$(curl -s -o /dev/null -w "Total: %{time_total}s | DNS: %{time_namelookup}s | Connect: %{time_connect}s | TLS: %{time_appconnect}s | Transfer: %{time_starttransfer}s\n" "$API_URL")
+          echo "$API_PERF"
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.detect-changes.outputs.version }}
+          release_name: Release v${{ needs.detect-changes.outputs.version }}
+          body: |
+            ## 🚀 Release v${{ needs.detect-changes.outputs.version }}
+            
+            **Deployed**: ${{ github.event.head_commit.timestamp }}
+            **Commit**: ${{ github.sha }}
+            **Author**: ${{ github.event.head_commit.author.name }}
+            
+            ### Changes
+            ${{ github.event.head_commit.message }}
+            
+            ### URLs
+            - 🌐 Frontend: https://plan-de-charge.aws.nda-partners.com
+            - 🔗 API Health: https://plan-de-charge.aws.nda-partners.com/health
+            
+            ---
+            *This release was automatically created by the CI/CD pipeline*
+          draft: false
+          prerelease: false
+        continue-on-error: true

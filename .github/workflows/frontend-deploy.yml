@@ -88,36 +88,69 @@ jobs:
             --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
 
-      - name: Run smoke tests
+      - name: Enhanced smoke tests and performance validation
         run: |
-          echo "Running smoke tests..."
+          echo "🧪 Running comprehensive frontend validation..."
 
-          # Wait for CloudFront invalidation to complete (simplified)
-          sleep 30
-
-          # Basic smoke test
-          FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
-
-          # Check if the site is accessible
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)
-          if [[ $STATUS_CODE == "200" ]]; then
-            echo "✅ Frontend is accessible"
-          else
-            echo "❌ Frontend returned status code: $STATUS_CODE"
-            exit 1
+          # Wait for CloudFront invalidation to complete
+          echo "⏳ Waiting for CloudFront invalidation..."
+          if [ ! -z "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+            aws cloudfront wait invalidation-completed \
+              --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+              --id $(aws cloudfront list-invalidations --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --query 'InvalidationList.Items[0].Id' --output text) \
+              || echo "⚠️ CloudFront invalidation wait timed out"
           fi
 
-      - name: Slack notification
+          FRONTEND_URL="https://plan-de-charge.aws.nda-partners.com"
+
+          # Enhanced health checks
+          echo "🔗 Testing frontend accessibility..."
+          for i in {1..3}; do
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)
+            RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" $FRONTEND_URL)
+            
+            if [[ $STATUS_CODE == "200" ]]; then
+              echo "✅ Frontend accessible (${RESPONSE_TIME}s response time)"
+              break
+            else
+              echo "⚠️ Frontend returned status code: $STATUS_CODE (attempt $i/3)"
+              if [ $i -eq 3 ]; then
+                echo "❌ Frontend health check failed after 3 attempts"
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
+
+          # Test critical pages
+          echo "🔍 Testing critical pages..."
+          PAGES=("/" "/auth" "/api/v1/health")
+          for page in "${PAGES[@]}"; do
+            if [[ $page == "/api/v1/health" ]]; then
+              continue # Skip API endpoint (tested in backend)
+            fi
+            
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${FRONTEND_URL}${page}")
+            if [[ $STATUS == "200" ]]; then
+              echo "✅ ${page} - OK"
+            else
+              echo "⚠️ ${page} - Status: $STATUS"
+            fi
+          done
+
+          # Performance validation
+          echo "⚡ Performance metrics:"
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "Response Time: %{time_total}s\nDNS Lookup: %{time_namelookup}s\nConnect Time: %{time_connect}s\nTLS Handshake: %{time_appconnect}s\n" $FRONTEND_URL)
+          echo "$RESPONSE_TIME"
+
+      - name: Deployment summary
         if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          text: |
-            Frontend deployment ${{ job.status }}!
-            Environment: ${{ env.ENVIRONMENT }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            S3 Bucket: ${{ env.S3_BUCKET }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo "## 🎨 Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ env.ENVIRONMENT }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket**: ${{ env.S3_BUCKET }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution**: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend URL**: https://plan-de-charge.aws.nda-partners.com" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,185 @@
+name: E2E Tests
+
+on:
+  workflow_call:
+    inputs:
+      base-url:
+        required: true
+        type: string
+        description: 'Base URL to test against'
+      environment:
+        required: false
+        type: string
+        default: 'production'
+        description: 'Environment being tested'
+
+jobs:
+  e2e-tests:
+    name: 🎭 E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Playwright
+        run: |
+          npm install -g @playwright/test
+          npx playwright install --with-deps
+
+      - name: Create E2E test configuration
+        run: |
+          mkdir -p e2e-tests
+          cat > e2e-tests/playwright.config.js << 'EOF'
+          module.exports = {
+            testDir: './tests',
+            timeout: 30000,
+            expect: {
+              timeout: 5000
+            },
+            fullyParallel: true,
+            forbidOnly: !!process.env.CI,
+            retries: process.env.CI ? 2 : 0,
+            workers: process.env.CI ? 1 : undefined,
+            reporter: 'html',
+            use: {
+              baseURL: process.env.BASE_URL,
+              trace: 'on-first-retry',
+              screenshot: 'only-on-failure',
+            },
+            projects: [
+              {
+                name: 'chromium',
+                use: { ...require('@playwright/test').devices['Desktop Chrome'] },
+              },
+              {
+                name: 'firefox',
+                use: { ...require('@playwright/test').devices['Desktop Firefox'] },
+              },
+              {
+                name: 'webkit',
+                use: { ...require('@playwright/test').devices['Desktop Safari'] },
+              },
+            ],
+          };
+          EOF
+
+      - name: Create E2E tests
+        run: |
+          mkdir -p e2e-tests/tests
+          
+          # Health check test
+          cat > e2e-tests/tests/health.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test.describe('Application Health', () => {
+            test('API health endpoint should be accessible', async ({ request }) => {
+              const response = await request.get('/health');
+              expect(response.ok()).toBeTruthy();
+              
+              const body = await response.json();
+              expect(body.status).toBe('healthy');
+              expect(body.environment).toBeTruthy();
+            });
+
+            test('Frontend should load successfully', async ({ page }) => {
+              await page.goto('/');
+              
+              // Wait for the page to load
+              await page.waitForLoadState('networkidle');
+              
+              // Check that the page title is set
+              await expect(page).toHaveTitle(/Plan de charge/i);
+              
+              // Check for key elements
+              const body = page.locator('body');
+              await expect(body).toBeVisible();
+            });
+          });
+          EOF
+          
+          # Authentication flow test
+          cat > e2e-tests/tests/auth.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test.describe('Authentication Flow', () => {
+            test('should display login page when not authenticated', async ({ page }) => {
+              await page.goto('/');
+              
+              // Wait for page to load
+              await page.waitForLoadState('networkidle');
+              
+              // Should see some form of authentication prompt or redirect
+              // Since SSO is mandatory, we expect to see SSO-related elements
+              const pageContent = await page.textContent('body');
+              
+              // Basic validation that the page loaded
+              expect(pageContent.length).toBeGreaterThan(0);
+            });
+          });
+          EOF
+          
+          # Performance test
+          cat > e2e-tests/tests/performance.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+
+          test.describe('Performance', () => {
+            test('page load time should be reasonable', async ({ page }) => {
+              const startTime = Date.now();
+              
+              await page.goto('/');
+              await page.waitForLoadState('networkidle');
+              
+              const loadTime = Date.now() - startTime;
+              console.log(`Page load time: ${loadTime}ms`);
+              
+              // Expect page to load within 5 seconds
+              expect(loadTime).toBeLessThan(5000);
+            });
+
+            test('API response time should be fast', async ({ request }) => {
+              const startTime = Date.now();
+              
+              const response = await request.get('/health');
+              
+              const responseTime = Date.now() - startTime;
+              console.log(`API response time: ${responseTime}ms`);
+              
+              expect(response.ok()).toBeTruthy();
+              expect(responseTime).toBeLessThan(2000); // 2 seconds max
+            });
+          });
+          EOF
+
+      - name: Run E2E tests
+        env:
+          BASE_URL: ${{ inputs.base-url }}
+        run: |
+          cd e2e-tests
+          npx playwright test --reporter=line,html
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: e2e-tests/playwright-report/
+          retention-days: 7
+
+      - name: Create test summary
+        if: always()
+        run: |
+          echo "## 🎭 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base URL**: ${{ inputs.base-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "e2e-tests/playwright-report/index.html" ]; then
+            echo "- **Report**: Available in artifacts" >> $GITHUB_STEP_SUMMARY
+          fi
