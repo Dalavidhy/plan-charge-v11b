@@ -87,15 +87,7 @@ jobs:
           # Enable required PostgreSQL extensions
           PGPASSWORD=postgres psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS citext;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
-
-          cd backend
-          # Create database tables using Python instead of alembic for tests
-          python -c "
-          import asyncio
-          from app.database import init_db
-          asyncio.run(init_db())
-          print('Database tables created successfully')
-          "
+          echo "Database extensions created successfully"
 
       - name: Run backend tests
         env:
@@ -276,15 +268,7 @@ jobs:
           # Enable required PostgreSQL extensions
           PGPASSWORD=postgres psql -h localhost -U postgres -d integration_test_db -c "CREATE EXTENSION IF NOT EXISTS citext;"
           PGPASSWORD=postgres psql -h localhost -U postgres -d integration_test_db -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
-
-          cd backend
-          # Create database tables using Python instead of alembic for tests
-          python -c "
-          import asyncio
-          from app.database import init_db
-          asyncio.run(init_db())
-          print('Database tables created successfully')
-          "
+          echo "Database extensions created successfully"
 
       - name: Start backend server
         env:
